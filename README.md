@@ -2,7 +2,7 @@
 
 ## Overview
 
-<img src="https://github.com/gophertuts/reminders-cli/raw/master/demo.gif?sanitize=true"/>
+<img src="https://github.com/gophertuts/reminders-cli/raw/master/cli-demo.gif?sanitize=true"/>
 
 ## Requirements
 
