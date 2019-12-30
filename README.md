@@ -96,7 +96,20 @@ retrying unsent notifications until Notifier service is up
 - `POST /reminders/fetch`       - fetches a list of reminders from DB
 - `DELETE /reminders/delete`    - deletes a list of reminders from DB
 
-## Notifier
+## Background Saver
+
+#### Features
+
+- Saves in-memory reminders to the disk (`db.json`)
+- Saves db config to the disk (`.db.config.json`)
+
+## Background Notifier
+
+#### Features
+
+- Pushes un-completed reminders to the Notifier service
+
+## Notifier Service
 
 #### Features
 
@@ -106,6 +119,14 @@ retrying unsent notifications until Notifier service is up
 
 - `GET /health`                 - responds with 200 when server is up & running
 - `POST /notify`                - sends OS notification and retry response
+
+## File DB
+
+#### Features
+
+- Records are saved inside `db.json` file
+- Has a db config file (`.db.config.json`)
+- Has an auto increment ID generator
 
 ## Installation ⚙
 
@@ -214,17 +235,17 @@ make vet
 ***Note:*** Before using `./bin/client` binary,
 make sure to have `/bin/server` and `notifier/notifier.js` up & running
 
-1st terminal
+**1st terminal**
 ```bash
 node notfier/notifier.js
 ```
 
-2nd terminal
+**2nd terminal**
 ```bash
 ./bin/server
 ```
 
-3rd terminal
+**3rd terminal**
 ```bash
 ./bin/client ...
 ```
@@ -233,16 +254,16 @@ node notfier/notifier.js
 
 - [Handler](https://golang.org/pkg/net/http/#Handler)
 
-## FEEDBACK ⚗
+## Feedback ⚗
 
 [GopherTuts TypeForm](https://feedback.gophertuts.com)
 
-## COMMUNITY 🙌
+## Community 🙌
 
 [GopherTuts Discord](https://community.gophertuts.com/)
 
 ---
 
-Enjoy 🚀🚀🚀
+**Enjoy** 🚀🚀🚀
 
 <img src="https://github.com/gophertuts/go-basics/raw/master/gophertuts.svg?sanitize=true" width="50px"/>
