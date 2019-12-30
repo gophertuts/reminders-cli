@@ -2,25 +2,24 @@
 
 ## Overview
 
-In this project we'll build a multi component CLI application
-which consists of mainly 3 parts: a CLI client, a backend API server
-and a notifier service.
+In this project we'll build a **multi component CLI application**
+which consists of mainly 3 parts: a `CLI client`, a `backend API` server
+and a `notifier service`.
 
 The CLI client will take the input from command line
 and pass it to the backend API through its HTTP client.
 
-The backend API server is an HTTP server which
-has all the needed endpoints for CRUD operations on reminders.
-It also has 2 background running workers: background saver
-& background notifier. Correspondingly saving the in-memory
+The backend API server is an **HTTP server** which
+has all the needed endpoints for **CRUD operations** on reminders.
+It also has 2 background running workers: **background saver**
+& **background notifier**. Correspondingly saving the in-memory
 data to the disk and notifying un-completed reminders.
 
 The backend API server also communicates with the notifier service
 through its own HTTP client.
 
-Speaking of the database layer, we'll be creating our own file
-database storage with some optimized mechanism for this
-type of application.
+Speaking of the database layer, we'll be creating our own **file database storage**
+with some optimized mechanism for this type of application.
 
 Ta-dah 🥳 🚀
 
@@ -30,32 +29,32 @@ Ta-dah 🥳 🚀
 
 - [Reminders CLI in Go](https://www.youtube.com/c/GopherTuts)
 
-## YouTube tutorials
+## YouTube tutorials 🎥
 
 - [Reminders CLI in Go #1](https://www.youtube.com/c/GopherTuts)
 - [Reminders CLI in Go #2](https://www.youtube.com/c/GopherTuts)
 
-...
+- ...
 
 - [Reminders CLI in Go #N](https://www.youtube.com/c/GopherTuts)
 
 
-## Requirements
+## Requirements 🤓
 
-- Node.js
-- Go
+- [Go](https://golang.org/doc/install)
+- [Node.js](https://nodejs.org/en/download/)
 
-In this tutorial we'll be writing a little bit of `Node.js`
+In this tutorial we'll be writing a little bit of [Node.js](https://nodejs.org/en/download/)
 aka the `Notifier Service` because it's the fastest
 cross platform OS notification system available for us.
 
-We'll also be using `yarn` package manager for this application.
+We'll also be using [Yarn](https://yarnpkg.com/lang/en/docs/install/) package manager for this application.
 
 And that's all on the JavaScript (Node.js) side.
 The rest is pure `Go code` also **without** any **third party packages**
 meaning we'll write absolutely everything from scratch.
 
-## Components
+## Components 🤓
 
 - **CLI Client**
 - **HTTP client** for communicating with the Backend API
@@ -108,7 +107,7 @@ retrying unsent notifications until Notifier service is up
 - `GET /health`                 - responds with 200 when server is up & running
 - `POST /notify`                - sends OS notification and retry response
 
-## Installation
+## Installation ⚙
 
 Before running any command or trying to compile the programs
 make sure you first have all the needed dependencies installed:
@@ -143,7 +142,7 @@ For more info refer to [GitBash - CygWin](https://gist.github.com/evanwill/02078
 
 ---
 
-## Run
+## Run 🎮
 
 #### `make` commands
 
@@ -243,5 +242,7 @@ node notfier/notifier.js
 [GopherTuts Discord](https://community.gophertuts.com/)
 
 ---
+
+Enjoy 🚀🚀🚀
 
 <img src="https://github.com/gophertuts/go-basics/raw/master/gophertuts.svg?sanitize=true" width="50px"/>
