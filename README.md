@@ -54,7 +54,7 @@ And that's all on the JavaScript (Node.js) side.
 The rest is pure `Go code` also **without** any **third party packages**
 meaning we'll write absolutely everything from scratch.
 
-## Components 🤓
+## Components 🧩
 
 - **CLI Client**
 - **HTTP client** for communicating with the Backend API
