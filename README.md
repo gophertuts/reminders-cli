@@ -31,7 +31,7 @@ Ta-dah 🥳 🚀
 
 ## YouTube tutorials 🎥
 
-- [Reminders CLI in Go #1](https://www.youtube.com/c/GopherTuts)
+- [Reminders CLI in Go #1 - Project setup & bare bones](https://youtu.be/-9CbX2MncZg)
 - [Reminders CLI in Go #2](https://www.youtube.com/c/GopherTuts)
 
 - ...
