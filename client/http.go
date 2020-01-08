@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+type idsBody struct {
+	IDs []int `json:"ids"`
+}
+
 // Reminder represents the CLI client reminder
 type Reminder struct {
 	ID         int           `json:"id"`
@@ -30,14 +34,6 @@ func (r Reminder) String() string {
 		log.Fatalf("could not indent json: %v", err)
 	}
 	return buff.String()
-}
-
-func (r Reminder) body() io.Reader {
-	bs, err := json.Marshal(&r)
-	if err != nil {
-		log.Fatalf("could not marshal json: %v", err)
-	}
-	return bytes.NewReader(bs)
 }
 
 // httpRoundTripper represents the HTTP interceptor for the CLI HTTP client
@@ -88,7 +84,7 @@ func (c HTTPClient) Create(title, message string, duration time.Duration) Remind
 	req := newReq(
 		http.MethodPost,
 		c.BackendURI+"/reminders/create",
-		reminder.body(),
+		body(&reminder),
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
@@ -115,7 +111,7 @@ func (c HTTPClient) Edit(id int, title, message string, duration time.Duration) 
 	req := newReq(
 		http.MethodPut,
 		c.BackendURI+"/reminders/edit",
-		reminder.body(),
+		body(&reminder),
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
@@ -133,18 +129,11 @@ func (c HTTPClient) Edit(id int, title, message string, duration time.Duration) 
 
 // Fetch calls the fetch API endpoint
 func (c HTTPClient) Fetch(ids []int) []Reminder {
-	type IDs struct {
-		IDs []int `json:"ids"`
-	}
-	body := IDs{IDs: ids}
-	bs, err := json.Marshal(&body)
-	if err != nil {
-		log.Fatalf("could not marshal json: %v", err)
-	}
+	b := idsBody{IDs: ids}
 	req := newReq(
 		http.MethodPost,
 		c.BackendURI+"/reminders/fetch",
-		bytes.NewReader(bs),
+		body(&b),
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
@@ -162,18 +151,11 @@ func (c HTTPClient) Fetch(ids []int) []Reminder {
 
 // Delete calls the delete API endpoint
 func (c HTTPClient) Delete(ids []int) {
-	type IDs struct {
-		IDs []int `json:"ids"`
-	}
-	body := IDs{IDs: ids}
-	bs, err := json.Marshal(&body)
-	if err != nil {
-		log.Fatalf("could not marshal json: %v", err)
-	}
+	b := idsBody{IDs: ids}
 	req := newReq(
 		http.MethodDelete,
 		c.BackendURI+"/reminders/delete",
-		bytes.NewReader(bs),
+		body(&b),
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
@@ -189,6 +171,14 @@ func newReq(method, uri string, body io.Reader) *http.Request {
 		log.Fatalf("could not create http request: %v", err)
 	}
 	return req
+}
+
+func body(body interface{}) io.Reader {
+	bs, err := json.Marshal(body)
+	if err != nil {
+		log.Fatalf("could not marshal json: %v", err)
+	}
+	return bytes.NewReader(bs)
 }
 
 // checkStatusCode checks whether the response status code equals to expected one
