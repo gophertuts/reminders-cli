@@ -120,7 +120,8 @@ func (r Reminders) save() {
 	log.Println("saving current snapshot")
 	reminders := make([]models.Reminder, len(r.Snapshot.All))
 	for id, i := range r.Snapshot.OriginalOrder {
-		reminders[i] = r.Snapshot.All[id]
+		reminder := r.Snapshot.All[id]
+		reminders[i] = reminder
 	}
 	r.repo.Save(reminders)
 }
@@ -130,6 +131,7 @@ func (r Reminders) snapshot() Snapshot {
 	return r.Snapshot
 }
 
+// snapshotGrooming clears the current snapshot from notified reminders
 func (r Reminders) snapshotGrooming(notifiedReminders ...models.Reminder) {
 	if len(notifiedReminders) > 0 {
 		log.Printf("snapshot grooming: %d record(s)", len(notifiedReminders))
@@ -141,6 +143,7 @@ func (r Reminders) snapshotGrooming(notifiedReminders ...models.Reminder) {
 	}
 }
 
+// retry retries a reminder by resetting its duration
 func (r Reminders) retry(reminder models.Reminder, d time.Duration) {
 	log.Printf("retrying record with id: %d ", reminder.ID)
 	reminder.ModifiedAt = time.Now()

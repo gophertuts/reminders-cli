@@ -86,14 +86,7 @@ func (s *BackgroundNotifier) Start() {
 				nowTick := time.Now().UnixNano()
 				deltaTick := time.Now().Add(time.Second).UnixNano()
 				if reminderTick > nowTick && reminderTick < deltaTick {
-					go func(r models.Reminder) {
-						retry, d := s.Client.Notify(r)
-						if retry != nil {
-							s.service.retry(r, d)
-						} else {
-							s.service.snapshotGrooming(r)
-						}
-					}(reminder)
+					go s.notify(reminder)
 					notified[reminder.ID] = reminder
 				}
 			}
@@ -101,6 +94,15 @@ func (s *BackgroundNotifier) Start() {
 				log.Printf("notified: %d record(s)\n", len(notified))
 			}
 		}
+	}
+}
+
+func (s *BackgroundNotifier) notify(r models.Reminder) {
+	retry, d := s.Client.Notify(r)
+	if retry != nil {
+		s.service.retry(r, d)
+	} else {
+		s.service.snapshotGrooming(r)
 	}
 }
 

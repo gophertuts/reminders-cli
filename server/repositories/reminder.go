@@ -4,13 +4,20 @@ import (
 	"github.com/gophertuts/reminders-cli/server/models"
 )
 
+// FileDB represents the file database
+type FileDB interface {
+	Write(reminders []models.Reminder)
+	ReadAll() []models.Reminder
+	GenerateID() int
+}
+
 // Reminder represents the Reminder repository (database layer)
 type Reminder struct {
-	DB *DB
+	DB FileDB
 }
 
 // NewReminder creates a new instance of Reminder repository
-func NewReminder(db *DB) Reminder {
+func NewReminder(db FileDB) Reminder {
 	return Reminder{
 		DB: db,
 	}
@@ -36,5 +43,5 @@ func (r Reminder) Filter(filterFn func(reminder models.Reminder) bool) (map[int]
 
 // NextID fetches the next DB AUTOINCREMENT id
 func (r Reminder) NextID() int {
-	return r.DB.genID()
+	return r.DB.GenerateID()
 }

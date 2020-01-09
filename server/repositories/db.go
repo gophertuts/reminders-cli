@@ -133,8 +133,8 @@ func genChecksum(r io.Reader) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-// genID generates the next AUTOINCREMENT id for reminders
-func (d *DB) genID() int {
+// GenerateID generates the next AUTOINCREMENT id for a reminder
+func (d *DB) GenerateID() int {
 	d.ID++
 	return d.ID
 }
