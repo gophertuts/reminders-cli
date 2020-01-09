@@ -97,6 +97,7 @@ func (s *BackgroundNotifier) Start() {
 	}
 }
 
+// notify notifies a reminder via the HTTP client
 func (s *BackgroundNotifier) notify(r models.Reminder) {
 	retry, d := s.Client.Notify(r)
 	if retry != nil {
