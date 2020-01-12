@@ -11,7 +11,7 @@ app.post('/notify', (req, res) => {
     notify(req.body, reply => res.send(reply))
 });
 
-app.listen(port, () => {console.log(`server is up and running on port: ${port}`)});
+app.listen(port, () => console.log(`server is up and running on port: ${port}`));
 
 const notify = ({title, message}, cb) => {
     notifier.notify(
@@ -25,7 +25,7 @@ const notify = ({title, message}, cb) => {
             closeLabel: 'Completed?',
             timeout: 15,
         },
-        function(err, response, reply) {
+        (err, response, reply) => {
             cb(reply)
         }
     );
