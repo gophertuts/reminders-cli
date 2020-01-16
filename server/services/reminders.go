@@ -83,7 +83,6 @@ type ReminderEditBody struct {
 
 // Edit edits a given Reminder
 func (r Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
-	fmt.Println(reminderBody)
 	reminder, ok := r.Snapshot.All[reminderBody.ID]
 	if !ok {
 		err := fmt.Errorf("could not find reminder with id: %d", reminderBody.ID)
@@ -96,7 +95,6 @@ func (r Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 		reminder.Message = reminderBody.Message
 	}
 	if reminderBody.Duration > 0 {
-		fmt.Println("set duration")
 		reminder.Duration = reminderBody.Duration
 	}
 	reminder.ModifiedAt = time.Now()
