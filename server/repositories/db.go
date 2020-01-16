@@ -43,9 +43,9 @@ func NewDB(dbPath, dbCfgPath string) *DB {
 }
 
 // Read fetches a list of reminders by given ids
-func (d *DB) Read(ids []string) []models.Reminder {
-	log.Printf("successfully read: %d record(s)\n", len(ids))
-	return []models.Reminder{}
+func (d *DB) Read(bs []byte) (int, error) {
+	resetFilePointer(d.DB)
+	return d.DB.Read(bs)
 }
 
 // ReadAll fetches a list of all reminders
@@ -61,12 +61,8 @@ func (d *DB) ReadAll() []models.Reminder {
 }
 
 // Write writes a list of reminders to DB
-func (d *DB) Write(reminders []models.Reminder) (int, error) {
+func (d *DB) Write(bs []byte) (int, error) {
 	resetFilePointer(d.DB)
-	bs, err := json.Marshal(reminders)
-	if err != nil {
-		log.Fatalf("could not marshal json: %v", err)
-	}
 	bs = append(bs, '\n')
 	sum := genChecksum(bytes.NewReader(bs))
 	if d.Checksum == sum {
@@ -79,10 +75,13 @@ func (d *DB) Write(reminders []models.Reminder) (int, error) {
 		log.Fatalf("could not create the new db.json: %v", err)
 	}
 	d.DB = newDB
-	err = json.NewEncoder(d.DB).Encode(&reminders)
+
+	n, err := d.DB.Write(bs)
 	if err != nil {
-		log.Fatalf("could not encode db json: %v", err)
+		log.Fatalf("could not write to db: %v", err)
 	}
+	log.Printf("successfully wrote: %d byte(s)\n", n)
+
 	newDBCfg, err := os.Create(d.DBCfg.Name())
 	if err != nil {
 		log.Fatalf("could not create the new .db.config.json: %v", err)
@@ -96,8 +95,23 @@ func (d *DB) Write(reminders []models.Reminder) (int, error) {
 		log.Fatalf("could not encode db config json: %v", err)
 	}
 
-	log.Printf("successfully wrote: %d record(s)\n", len(reminders))
-	return len(reminders), nil
+	return n, nil
+}
+
+// SizeOf retrieves the current size of the database
+func (d *DB) SizeOf() int {
+	resetFilePointer(d.DB)
+	stat, err := d.DB.Stat()
+	if err != nil {
+		log.Fatalf("could not read db file stats: %v", err)
+	}
+	return int(stat.Size())
+}
+
+// GenerateID generates the next AUTOINCREMENT id for a reminder
+func (d *DB) GenerateID() int {
+	d.ID++
+	return d.ID
 }
 
 // Kill shuts down properly the file database by saving metadata to config file
@@ -132,12 +146,6 @@ func genChecksum(r io.Reader) string {
 	}
 	sum := hash.Sum(nil)
 	return fmt.Sprintf("%x", sum)
-}
-
-// GenerateID generates the next AUTOINCREMENT id for a reminder
-func (d *DB) GenerateID() int {
-	d.ID++
-	return d.ID
 }
 
 // resetFilePointer resets the file pointer to allow future readings

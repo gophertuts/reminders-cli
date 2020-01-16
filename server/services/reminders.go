@@ -164,7 +164,7 @@ func (r Reminders) save() {
 		log.Fatalf("could not save snapshot: %v", err)
 	}
 	if n > 0 {
-		log.Printf("successfully saved snapshot: %d reminders", n)
+		log.Printf("successfully saved snapshot: %d reminders", len(reminders))
 	}
 }
 
