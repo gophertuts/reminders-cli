@@ -69,7 +69,7 @@ type BackendHTTPClient interface {
 	Create(title, message string, duration time.Duration) Reminder
 	Edit(id int, title, message string, duration time.Duration) Reminder
 	Fetch(ids []int) []Reminder
-	Delete(ids []int)
+	Delete(ids []int) IDsResponse
 }
 
 // Switch represents CLI command switch
@@ -120,8 +120,13 @@ func (s Switch) Switch() {
 		deleteCmd.Var(&idFlag, IDFlag, "List of reminder IDs (int) to delete")
 		s.checkArgs(1)
 		s.parseCmd(deleteCmd)
-		s.Client.Delete(idFlag)
-		fmt.Printf("reminders successfully deleted record(s):\n%v\n", idFlag)
+		resIDs := s.Client.Delete(idFlag)
+		if len(resIDs.NotFoundIDs) > 0 {
+			fmt.Printf("could not delete record(s):\n%v\n", resIDs.NotFoundIDs)
+		}
+		if len(resIDs.DeletedIDs) > 0 {
+			fmt.Printf("successfully deleted record(s):\n%v\n", resIDs.DeletedIDs)
+		}
 	default:
 		fmt.Printf("%q is not a valid command.\n", s.Args[1])
 		os.Exit(2)

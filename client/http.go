@@ -149,8 +149,14 @@ func (c HTTPClient) Fetch(ids []int) []Reminder {
 	return rs
 }
 
+// IDsResponse represents response in form of deleted and not found ids
+type IDsResponse struct {
+	NotFoundIDs []int `json:"not_found_ids"`
+	DeletedIDs  []int `json:"deleted_ids"`
+}
+
 // Delete calls the delete API endpoint
-func (c HTTPClient) Delete(ids []int) {
+func (c HTTPClient) Delete(ids []int) IDsResponse {
 	b := idsBody{IDs: ids}
 	req := newReq(
 		http.MethodDelete,
@@ -161,7 +167,14 @@ func (c HTTPClient) Delete(ids []int) {
 	if err != nil && err != io.EOF {
 		log.Fatalf("could not call delete api endpoint: %v", err)
 	}
-	checkStatusCode(res, http.StatusNoContent)
+	checkStatusCode(res, http.StatusOK)
+
+	var idsRes IDsResponse
+	err = json.NewDecoder(res.Body).Decode(&idsRes)
+	if err != nil {
+		log.Fatalf("could not decode backend api response: %v", err)
+	}
+	return idsRes
 }
 
 // newReq creates a new HTTP request to work with later on

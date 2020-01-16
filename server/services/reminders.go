@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gophertuts/reminders-cli/server/controllers"
 	"github.com/gophertuts/reminders-cli/server/models"
 )
 
@@ -16,7 +15,7 @@ const (
 
 // ReminderRepository represents the Reminder repository
 type ReminderRepository interface {
-	Save([]models.Reminder)
+	Save([]models.Reminder) (int, error)
 	Filter(filterFn func(reminder models.Reminder) bool) (map[int]models.Reminder, map[int]int)
 	NextID() int
 }
@@ -26,6 +25,7 @@ type Snapshot struct {
 	All           map[int]models.Reminder
 	UnCompleted   map[int]models.Reminder
 	OriginalOrder map[int]int
+	deleted       []int
 }
 
 // Reminders represents the Reminders service
@@ -50,8 +50,15 @@ func NewReminders(repo ReminderRepository) Reminders {
 	}
 }
 
+// ReminderCreateBody represents the model for creating a reminder
+type ReminderCreateBody struct {
+	Title    string
+	Message  string
+	Duration time.Duration
+}
+
 // Create creates a new Reminder
-func (r Reminders) Create(reminderBody controllers.ReminderCreateBody) models.Reminder {
+func (r Reminders) Create(reminderBody ReminderCreateBody) models.Reminder {
 	reminder := models.Reminder{
 		ID:         r.repo.NextID(),
 		Title:      reminderBody.Title,
@@ -66,8 +73,16 @@ func (r Reminders) Create(reminderBody controllers.ReminderCreateBody) models.Re
 	return reminder
 }
 
+// ReminderEditBody represents the model for editing a reminder
+type ReminderEditBody struct {
+	ID       int
+	Title    string
+	Message  string
+	Duration time.Duration
+}
+
 // Edit edits a given Reminder
-func (r Reminders) Edit(reminderBody controllers.ReminderEditBody) (models.Reminder, error) {
+func (r Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
 	fmt.Println(reminderBody)
 	reminder, ok := r.Snapshot.All[reminderBody.ID]
 	if !ok {
@@ -106,24 +121,53 @@ func (r Reminders) Fetch(ids []int) []models.Reminder {
 	return reminders
 }
 
-// Delete deletes a list of reminders and persists the changes
-func (r Reminders) Delete(ids []int) {
-	for _, id := range ids {
-		delete(r.Snapshot.All, id)
-		delete(r.Snapshot.UnCompleted, id)
-		delete(r.Snapshot.OriginalOrder, id)
-	}
+// IDsResponse represents response in form of deleted and not found ids
+type IDsResponse struct {
+	NotFoundIDs []int
+	DeletedIDs  []int
 }
 
-// Save saves the current reminders snapshot
-func (r Reminders) save() {
-	log.Println("saving current snapshot")
-	reminders := make([]models.Reminder, len(r.Snapshot.All))
-	for id, i := range r.Snapshot.OriginalOrder {
-		reminder := r.Snapshot.All[id]
-		reminders[i] = reminder
+// Delete deletes a list of reminders and persists the changes
+func (r Reminders) Delete(ids []int) IDsResponse {
+	var idsRes IDsResponse
+	for _, id := range ids {
+		_, ok := r.Snapshot.All[id]
+		if !ok {
+			idsRes.NotFoundIDs = append(idsRes.NotFoundIDs, id)
+		} else {
+			idsRes.DeletedIDs = append(idsRes.DeletedIDs, id)
+			delete(r.Snapshot.All, id)
+			delete(r.Snapshot.UnCompleted, id)
+		}
 	}
-	r.repo.Save(reminders)
+	return idsRes
+}
+
+// save saves the current reminders snapshot
+func (r Reminders) save() {
+	var reminders []models.Reminder
+	if len(r.Snapshot.All) == len(r.Snapshot.OriginalOrder) {
+		reminders = make([]models.Reminder, len(r.Snapshot.All))
+		for id, i := range r.Snapshot.OriginalOrder {
+			reminders[i] = r.Snapshot.All[id]
+		}
+	} else {
+		for id := range r.Snapshot.OriginalOrder {
+			reminder, ok := r.Snapshot.All[id]
+			if ok {
+				reminders = append(reminders, reminder)
+			} else {
+				delete(r.Snapshot.OriginalOrder, id)
+			}
+		}
+	}
+	n, err := r.repo.Save(reminders)
+	if err != nil {
+		log.Fatalf("could not save snapshot: %v", err)
+	}
+	if n > 0 {
+		log.Printf("successfully saved snapshot: %d reminders", n)
+	}
 }
 
 // GetSnapshot fetches the current service snapshot
@@ -145,13 +189,17 @@ func (r Reminders) snapshotGrooming(notifiedReminders ...models.Reminder) {
 
 // retry retries a reminder by resetting its duration
 func (r Reminders) retry(reminder models.Reminder, d time.Duration) {
-	log.Printf("retrying record with id: %d ", reminder.ID)
 	reminder.ModifiedAt = time.Now()
 	if d <= 0 {
 		reminder.Duration = retryPeriod
 	} else {
 		reminder.Duration = d
 	}
+	log.Printf(
+		"retrying record with id: %d after %v",
+		reminder.ID,
+		reminder.Duration.String(),
+	)
 	r.Snapshot.All[reminder.ID] = reminder
 	r.Snapshot.UnCompleted[reminder.ID] = reminder
 }

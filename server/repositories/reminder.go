@@ -6,7 +6,10 @@ import (
 
 // FileDB represents the file database
 type FileDB interface {
-	Write(reminders []models.Reminder)
+	// Todo: make it accept a function and rename it to Write([]byte) (int, error)
+	Write(reminders []models.Reminder) (int, error)
+
+	// Todo: make it accept a function and rename it to Write([]byte) (int, error)
 	ReadAll() []models.Reminder
 	GenerateID() int
 }
@@ -24,8 +27,8 @@ func NewReminder(db FileDB) Reminder {
 }
 
 // Save saves the current snapshot of reminders in the DB
-func (r Reminder) Save(reminders []models.Reminder) {
-	r.DB.Write(reminders)
+func (r Reminder) Save(reminders []models.Reminder) (int, error) {
+	return r.DB.Write(reminders)
 }
 
 // Filter filters reminders by a filtering function

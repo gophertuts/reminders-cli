@@ -1,11 +1,14 @@
 package controllers
 
 import (
+	"log"
 	"net/http"
+
+	"github.com/gophertuts/reminders-cli/server/services"
 )
 
 type deleter interface {
-	Delete(ids []int)
+	Delete(ids []int) services.IDsResponse
 }
 
 func deleteReminders(service deleter) http.Handler {
@@ -15,7 +18,17 @@ func deleteReminders(service deleter) http.Handler {
 			IDs []int `json:"ids"`
 		}
 		jsonDecode(r.Body, &body)
-		service.Delete(body.IDs)
-		w.WriteHeader(http.StatusNoContent)
+		ids := service.Delete(body.IDs)
+		if len(ids.NotFoundIDs) > 0 {
+			log.Printf("could not delete ids: %v\n", ids.NotFoundIDs)
+		}
+		type response struct {
+			NotFoundIDs []int `json:"not_found_ids"`
+			DeletedIDs  []int `json:"deleted_ids"`
+		}
+		jsonEncode(w, response{
+			NotFoundIDs: ids.NotFoundIDs,
+			DeletedIDs:  ids.DeletedIDs,
+		})
 	})
 }

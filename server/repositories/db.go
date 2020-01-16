@@ -61,7 +61,7 @@ func (d *DB) ReadAll() []models.Reminder {
 }
 
 // Write writes a list of reminders to DB
-func (d *DB) Write(reminders []models.Reminder) {
+func (d *DB) Write(reminders []models.Reminder) (int, error) {
 	resetFilePointer(d.DB)
 	bs, err := json.Marshal(reminders)
 	if err != nil {
@@ -70,7 +70,7 @@ func (d *DB) Write(reminders []models.Reminder) {
 	bs = append(bs, '\n')
 	sum := genChecksum(bytes.NewReader(bs))
 	if d.Checksum == sum {
-		return
+		return 0, nil
 	}
 
 	d.Checksum = sum
@@ -97,6 +97,7 @@ func (d *DB) Write(reminders []models.Reminder) {
 	}
 
 	log.Printf("successfully wrote: %d record(s)\n", len(reminders))
+	return len(reminders), nil
 }
 
 // Kill shuts down properly the file database by saving metadata to config file
