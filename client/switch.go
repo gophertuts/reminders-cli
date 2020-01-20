@@ -9,19 +9,10 @@ import (
 )
 
 const (
-	// flags names
 	titleFlag    = "title"
 	messageFlag  = "message"
 	durationFlag = "duration"
 	idFlag       = "id"
-)
-
-var (
-	// flags variables
-	idFlagVar       flagList
-	titleFlagVar    string
-	messageFlagVar  string
-	durationFlagVar time.Duration
 )
 
 // flagList represents []int values for CLI flags
@@ -76,52 +67,59 @@ func (s Switch) Switch() {
 	cmd()(cmdName)
 }
 
+// create represents the create command
 func (s Switch) create() func(string) {
 	return func(cmdName string) {
 		createCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		s.setReminderFlags(createCmd)
+		t, m, d := s.reminderFlags(createCmd)
 		s.checkArgs(3)
 		s.parseCmd(createCmd)
-		res := s.client.Create(titleFlagVar, messageFlagVar, durationFlagVar)
+		res := s.client.Create(*t, *m, *d)
 		fmt.Printf("reminder created successfully:\n%s\n", res)
 	}
 }
 
+// edit represents the edit command
 func (s Switch) edit() func(string) {
 	return func(cmdName string) {
+		ids := flagList{}
 		editCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		editCmd.Var(&idFlagVar, idFlag, "The ID (int) of the reminder to edit")
-		s.setReminderFlags(editCmd)
+		editCmd.Var(&ids, idFlag, "The ID (int) of the reminder to edit")
+		t, m, d := s.reminderFlags(editCmd)
 		s.checkArgs(2)
 		s.parseCmd(editCmd)
-		lastID := idFlagVar[len(idFlagVar)-1]
-		res := s.client.Edit(lastID, titleFlagVar, messageFlagVar, durationFlagVar)
+		lastID := ids[len(ids)-1]
+		res := s.client.Edit(lastID, *t, *m, *d)
 		fmt.Printf("reminder edited successfully:\n%s\n", res)
 	}
 }
 
+// fetch represents the fetch command
 func (s Switch) fetch() func(string) {
 	return func(cmdName string) {
+		ids := flagList{}
 		fetchCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		fetchCmd.Var(&idFlagVar, idFlag, "List of reminder IDs (int) to fetch")
+		fetchCmd.Var(&ids, idFlag, "List of reminder IDs (int) to fetch")
 		s.checkArgs(1)
 		s.parseCmd(fetchCmd)
-		res := s.client.Fetch(idFlagVar)
+		res := s.client.Fetch(ids)
 		fmt.Printf("reminders fetched successfully:\n%s\n", res)
 	}
 }
 
+// delete represents the delete command
 func (s Switch) delete() func(string) {
 	return func(cmdName string) {
+		ids := flagList{}
 		deleteCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		deleteCmd.Var(&idFlagVar, idFlag, "List of reminder IDs (int) to delete")
+		deleteCmd.Var(&ids, idFlag, "List of reminder IDs (int) to delete")
 		s.checkArgs(1)
 		s.parseCmd(deleteCmd)
-		err := s.client.Delete(idFlagVar)
+		err := s.client.Delete(ids)
 		if err != nil {
-			log.Fatalf("could not delete record(s):\n%v\n%v\n", idFlagVar, err)
+			log.Fatalf("could not delete record(s):\n%v\n%v\n", ids, err)
 		}
-		fmt.Printf("successfully deleted record(s):\n%v\n", idFlagVar)
+		fmt.Printf("successfully deleted record(s):\n%v\n", ids)
 	}
 }
 
@@ -135,13 +133,15 @@ func (s Switch) help() {
 }
 
 // reminderFlags configures reminder specific flags for a command
-func (s Switch) setReminderFlags(f *flag.FlagSet) {
-	f.StringVar(&titleFlagVar, titleFlag, "", "Reminder title")
-	f.StringVar(&titleFlagVar, "t", "", "Reminder title")
-	f.StringVar(&messageFlagVar, messageFlag, "", "Reminder message")
-	f.StringVar(&messageFlagVar, "m", "", "Reminder message")
-	f.DurationVar(&durationFlagVar, durationFlag, 0, "Reminder time")
-	f.DurationVar(&durationFlagVar, "d", 0, "Reminder time")
+func (s Switch) reminderFlags(f *flag.FlagSet) (*string, *string, *time.Duration) {
+	t, m, d := "", "", time.Duration(0)
+	f.StringVar(&t, titleFlag, "", "Reminder title")
+	f.StringVar(&t, "t", "", "Reminder title")
+	f.StringVar(&m, messageFlag, "", "Reminder message")
+	f.StringVar(&m, "m", "", "Reminder message")
+	f.DurationVar(&d, durationFlag, 0, "Reminder time")
+	f.DurationVar(&d, "d", 0, "Reminder time")
+	return &t, &m, &d
 }
 
 // parseCmd parses sub-command flags
