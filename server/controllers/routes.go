@@ -6,6 +6,14 @@ import (
 	"github.com/gophertuts/reminders-cli/server/middleware"
 )
 
+// HTTP params
+const (
+	idParamName  = "id"
+	idsParamName = "ids"
+	idParam      = `{` + idParamName + `}:^[1-9]+$`
+	idsParam     = `{` + idsParamName + `}:[1-9]+(,[1-9]+)*`
+)
+
 // RemindersService represents the Reminders service
 type RemindersService interface {
 	creator
@@ -21,14 +29,14 @@ type RouterConfig struct {
 
 // NewRouter creates a new server (backend) application router
 func NewRouter(cfg RouterConfig) http.Handler {
-	r := http.NewServeMux()
+	r := RegexpMux{}
 	m := middleware.New(
 		middleware.HTTPLogger,
 	)
-	r.HandleFunc("/health", health)
-	r.Handle("/reminders/create", m.Then(createReminder(cfg.Service)))
-	r.Handle("/reminders/edit", m.Then(editReminder(cfg.Service)))
-	r.Handle("/reminders/fetch", m.Then(fetchReminders(cfg.Service)))
-	r.Handle("/reminders/delete", m.Then(deleteReminders(cfg.Service)))
+	r.Get("/health", m.Then(health()))
+	r.Post("/reminders", m.Then(createReminder(cfg.Service)))
+	r.Get("/reminders/"+idsParam, m.Then(fetchReminders(cfg.Service)))
+	r.Delete("/reminders/"+idsParam, m.Then(deleteReminders(cfg.Service)))
+	r.Patch("/reminders/"+idParam, m.Then(editReminder(cfg.Service)))
 	return r
 }

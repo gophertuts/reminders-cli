@@ -15,16 +15,15 @@ type editor interface {
 
 func editReminder(service editor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkHTTPMethod(w, r, http.MethodPut)
+		id := parseIDParam(r.Context())
 		var body struct {
-			ID       int           `json:"id"`
 			Title    string        `json:"title"`
 			Message  string        `json:"message"`
 			Duration time.Duration `json:"duration"`
 		}
 		jsonDecode(r.Body, &body)
 		reminder, err := service.Edit(services.ReminderEditBody{
-			ID:       body.ID,
+			ID:       id,
 			Title:    body.Title,
 			Message:  body.Message,
 			Duration: body.Duration,
@@ -32,6 +31,6 @@ func editReminder(service editor) http.Handler {
 		if err != nil {
 			log.Fatalf("could not edit reminder: %v", err)
 		}
-		jsonEncode(w, reminder)
+		jsonEncode(w, reminder, http.StatusOK)
 	})
 }

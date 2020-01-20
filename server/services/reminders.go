@@ -25,7 +25,6 @@ type Snapshot struct {
 	All           map[int]models.Reminder
 	UnCompleted   map[int]models.Reminder
 	OriginalOrder map[int]int
-	deleted       []int
 }
 
 // Reminders represents the Reminders service
@@ -109,7 +108,7 @@ func (r Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 
 // Fetch fetches a list of reminders
 func (r Reminders) Fetch(ids []int) []models.Reminder {
-	var reminders []models.Reminder
+	reminders := []models.Reminder{}
 	for _, id := range ids {
 		reminder, ok := r.Snapshot.All[id]
 		if ok {

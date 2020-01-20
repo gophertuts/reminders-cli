@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -46,20 +45,22 @@ var (
 	titleFlag    string
 	messageFlag  string
 	durationFlag time.Duration
+
+	flagShortcuts = map[string]string{
+		TitleFlag:    "t",
+		MessageFlag:  "m",
+		DurationFlag: "d",
+	}
 )
 
 // flagList represents []int values for CLI flags
-type flagList []int
+type flagList []string
 
 func (i *flagList) String() string {
 	return "my string representation"
 }
 
-func (i *flagList) Set(value string) error {
-	v, err := strconv.Atoi(value)
-	if err != nil {
-		log.Fatalf("could not covert value to int: %v", err)
-	}
+func (i *flagList) Set(v string) error {
 	*i = append(*i, v)
 	return nil
 }
@@ -67,9 +68,9 @@ func (i *flagList) Set(value string) error {
 // BackendHTTPClient represents the HTTP client for communicating with the Backend API
 type BackendHTTPClient interface {
 	Create(title, message string, duration time.Duration) Reminder
-	Edit(id int, title, message string, duration time.Duration) Reminder
-	Fetch(ids []int) []Reminder
-	Delete(ids []int) IDsResponse
+	Edit(id string, title, message string, duration time.Duration) Reminder
+	Fetch(ids []string) []Reminder
+	Delete(ids []string) error
 }
 
 // Switch represents CLI command switch
@@ -94,18 +95,14 @@ func (s Switch) Switch() {
 	// 3rd+ args 	- the command flags
 	switch s.Args[1] {
 	case CreateCmd:
-		createCmd.StringVar(&titleFlag, TitleFlag, "", "Reminder title")
-		createCmd.StringVar(&messageFlag, MessageFlag, "", "Reminder message")
-		createCmd.DurationVar(&durationFlag, DurationFlag, 0, "Reminder time")
+		s.reminderFlags(createCmd)
 		s.checkArgs(3)
 		s.parseCmd(createCmd)
 		res := s.Client.Create(titleFlag, messageFlag, durationFlag)
 		fmt.Printf("reminder created successfully:\n%s\n", res)
 	case EditCmd:
 		editCmd.Var(&idFlag, IDFlag, "The ID (int) of the reminder to edit")
-		editCmd.StringVar(&titleFlag, TitleFlag, "", "Reminder title")
-		editCmd.StringVar(&messageFlag, MessageFlag, "", "Reminder message")
-		editCmd.DurationVar(&durationFlag, DurationFlag, 0, "Reminder time")
+		s.reminderFlags(editCmd)
 		s.checkArgs(2)
 		s.parseCmd(editCmd)
 		res := s.Client.Edit(idFlag[len(idFlag)-1], titleFlag, messageFlag, durationFlag)
@@ -120,21 +117,32 @@ func (s Switch) Switch() {
 		deleteCmd.Var(&idFlag, IDFlag, "List of reminder IDs (int) to delete")
 		s.checkArgs(1)
 		s.parseCmd(deleteCmd)
-		resIDs := s.Client.Delete(idFlag)
-		if len(resIDs.NotFoundIDs) > 0 {
-			fmt.Printf("could not delete record(s):\n%v\n", resIDs.NotFoundIDs)
+		err := s.Client.Delete(idFlag)
+		if err != nil {
+			log.Fatalf("could not delete record(s):\n%v\n%v\n", idFlag, err)
 		}
-		if len(resIDs.DeletedIDs) > 0 {
-			fmt.Printf("successfully deleted record(s):\n%v\n", resIDs.DeletedIDs)
-		}
+		fmt.Printf("successfully deleted record(s):\n%v\n", idFlag)
 	default:
 		fmt.Printf("%q is not a valid command.\n", s.Args[1])
 		os.Exit(2)
 	}
 }
 
+// reminderFlags configures reminder specific flags for a command
+func (s Switch) reminderFlags(f *flag.FlagSet) {
+	f.StringVar(&titleFlag, TitleFlag, "", "Reminder title")
+	f.StringVar(&titleFlag, flagShortcuts[TitleFlag], "", "Reminder title")
+	f.StringVar(&messageFlag, MessageFlag, "", "Reminder message")
+	f.StringVar(&messageFlag, flagShortcuts[MessageFlag], "", "Reminder message")
+	f.DurationVar(&durationFlag, DurationFlag, 0, "Reminder time")
+	f.DurationVar(&durationFlag, flagShortcuts[DurationFlag], 0, "Reminder time")
+}
+
 // checkArgs checks if the number of passed in args is greater or equal to min args
 func (s Switch) checkArgs(minArgs int) {
+	if len(s.Args) == 3 && s.Args[2] == "--help" {
+		return
+	}
 	if len(s.Args)-2 < minArgs {
 		fmt.Printf(
 			"incorect use of %s\n%s %s --help\n",

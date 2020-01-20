@@ -1,7 +1,11 @@
 package controllers
 
-import "net/http"
+import (
+	"net/http"
+)
 
-func health(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
+func health() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 }

@@ -8,8 +8,6 @@ import (
 	"io"
 	"log"
 	"os"
-
-	"github.com/gophertuts/reminders-cli/server/models"
 )
 
 // dbConfig represents the config which is used when DB is initialized
@@ -46,18 +44,6 @@ func NewDB(dbPath, dbCfgPath string) *DB {
 func (d *DB) Read(bs []byte) (int, error) {
 	resetFilePointer(d.DB)
 	return d.DB.Read(bs)
-}
-
-// ReadAll fetches a list of all reminders
-func (d *DB) ReadAll() []models.Reminder {
-	resetFilePointer(d.DB)
-	var reminders []models.Reminder
-	err := json.NewDecoder(d.DB).Decode(&reminders)
-	if err != nil && err != io.EOF {
-		log.Fatalf("could not decode json from db file: %v", err)
-	}
-	log.Printf("successfully read: %d record(s)\n", len(reminders))
-	return reminders
 }
 
 // Write writes a list of reminders to DB
@@ -100,7 +86,6 @@ func (d *DB) Write(bs []byte) (int, error) {
 
 // SizeOf retrieves the current size of the database
 func (d *DB) SizeOf() int {
-	resetFilePointer(d.DB)
 	stat, err := d.DB.Stat()
 	if err != nil {
 		log.Fatalf("could not read db file stats: %v", err)
@@ -142,13 +127,13 @@ func (d DB) Kill() {
 func genChecksum(r io.Reader) string {
 	hash := sha256.New()
 	if _, err := io.Copy(hash, r); err != nil {
-		log.Fatalf("could not copy file: %v", err)
+		log.Fatalf("could not copy file contents: %v", err)
 	}
 	sum := hash.Sum(nil)
 	return fmt.Sprintf("%x", sum)
 }
 
-// resetFilePointer resets the file pointer to allow future readings
+// resetFilePointer resets the file pointer to allow future reads
 func resetFilePointer(s io.Seeker) {
 	_, err := s.Seek(0, io.SeekStart)
 	if err != nil {
@@ -161,13 +146,13 @@ func openOrCreate(filePath string) *os.File {
 	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
 		file, err := os.OpenFile(filePath, os.O_RDWR, os.ModePerm)
 		if err != nil {
-			log.Fatalf("could not open filw: %v", err)
+			log.Fatalf("could not open the file: %v", err)
 		}
 		return file
 	}
 	file, err := os.Create(filePath)
 	if err != nil {
-		log.Fatalf("could not create file: %v", err)
+		log.Fatalf("could not create the file: %v", err)
 	}
 	return file
 }

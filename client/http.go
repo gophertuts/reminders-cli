@@ -6,12 +6,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
-
-type idsBody struct {
-	IDs []int `json:"ids"`
-}
 
 // Reminder represents the CLI client reminder
 type Reminder struct {
@@ -83,7 +81,7 @@ func (c HTTPClient) Create(title, message string, duration time.Duration) Remind
 	}
 	req := newReq(
 		http.MethodPost,
-		c.BackendURI+"/reminders/create",
+		c.BackendURI+"/reminders",
 		body(&reminder),
 	)
 	res, err := c.client.Do(req)
@@ -101,16 +99,20 @@ func (c HTTPClient) Create(title, message string, duration time.Duration) Remind
 }
 
 // Edit calls the edit API endpoint
-func (c HTTPClient) Edit(id int, title, message string, duration time.Duration) Reminder {
+func (c HTTPClient) Edit(id string, title, message string, duration time.Duration) Reminder {
+	i, err := strconv.Atoi(id)
+	if err != nil {
+		log.Fatalf("could not convert id: %s to number: %v", id, err)
+	}
 	reminder := Reminder{
-		ID:       id,
+		ID:       i,
 		Title:    title,
 		Message:  message,
 		Duration: duration,
 	}
 	req := newReq(
-		http.MethodPut,
-		c.BackendURI+"/reminders/edit",
+		http.MethodPatch,
+		c.BackendURI+"/reminders/"+id,
 		body(&reminder),
 	)
 	res, err := c.client.Do(req)
@@ -128,12 +130,11 @@ func (c HTTPClient) Edit(id int, title, message string, duration time.Duration) 
 }
 
 // Fetch calls the fetch API endpoint
-func (c HTTPClient) Fetch(ids []int) []Reminder {
-	b := idsBody{IDs: ids}
+func (c HTTPClient) Fetch(ids []string) []Reminder {
 	req := newReq(
-		http.MethodPost,
-		c.BackendURI+"/reminders/fetch",
-		body(&b),
+		http.MethodGet,
+		c.BackendURI+"/reminders/"+strings.Join(ids, ","),
+		nil,
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
@@ -156,25 +157,19 @@ type IDsResponse struct {
 }
 
 // Delete calls the delete API endpoint
-func (c HTTPClient) Delete(ids []int) IDsResponse {
-	b := idsBody{IDs: ids}
+func (c HTTPClient) Delete(ids []string) error {
 	req := newReq(
 		http.MethodDelete,
-		c.BackendURI+"/reminders/delete",
-		body(&b),
+		c.BackendURI+"/reminders/"+strings.Join(ids, ","),
+		nil,
 	)
 	res, err := c.client.Do(req)
 	if err != nil && err != io.EOF {
-		log.Fatalf("could not call delete api endpoint: %v", err)
+		log.Printf("could not call delete api endpoint: %v", err)
+		return err
 	}
-	checkStatusCode(res, http.StatusOK)
-
-	var idsRes IDsResponse
-	err = json.NewDecoder(res.Body).Decode(&idsRes)
-	if err != nil {
-		log.Fatalf("could not decode backend api response: %v", err)
-	}
-	return idsRes
+	checkStatusCode(res, http.StatusNoContent)
+	return nil
 }
 
 // newReq creates a new HTTP request to work with later on

@@ -14,7 +14,6 @@ type creator interface {
 
 func createReminder(service creator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkHTTPMethod(w, r, http.MethodPost)
 		var body struct {
 			Title    string        `json:"title"`
 			Message  string        `json:"message"`
@@ -26,7 +25,6 @@ func createReminder(service creator) http.Handler {
 			Message:  body.Message,
 			Duration: body.Duration,
 		})
-		w.WriteHeader(http.StatusCreated)
-		jsonEncode(w, reminder)
+		jsonEncode(w, reminder, http.StatusCreated)
 	})
 }

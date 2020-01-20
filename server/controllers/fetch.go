@@ -12,12 +12,8 @@ type fetcher interface {
 
 func fetchReminders(service fetcher) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkHTTPMethod(w, r, http.MethodPost)
-		var body struct {
-			IDs []int `json:"ids"`
-		}
-		jsonDecode(r.Body, &body)
-		reminders := service.Fetch(body.IDs)
-		jsonEncode(w, reminders)
+		ids := parseIDsParam(r.Context())
+		reminders := service.Fetch(ids)
+		jsonEncode(w, reminders, http.StatusOK)
 	})
 }

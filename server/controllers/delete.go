@@ -13,22 +13,11 @@ type deleter interface {
 
 func deleteReminders(service deleter) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		checkHTTPMethod(w, r, http.MethodDelete)
-		var body struct {
-			IDs []int `json:"ids"`
+		ids := parseIDsParam(r.Context())
+		idsRes := service.Delete(ids)
+		if len(idsRes.NotFoundIDs) > 0 {
+			log.Printf("could not delete ids: %v\n", idsRes.NotFoundIDs)
 		}
-		jsonDecode(r.Body, &body)
-		ids := service.Delete(body.IDs)
-		if len(ids.NotFoundIDs) > 0 {
-			log.Printf("could not delete ids: %v\n", ids.NotFoundIDs)
-		}
-		type response struct {
-			NotFoundIDs []int `json:"not_found_ids"`
-			DeletedIDs  []int `json:"deleted_ids"`
-		}
-		jsonEncode(w, response{
-			NotFoundIDs: ids.NotFoundIDs,
-			DeletedIDs:  ids.DeletedIDs,
-		})
+		w.WriteHeader(http.StatusNoContent)
 	})
 }
