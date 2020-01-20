@@ -2,8 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/gophertuts/reminders-cli/client"
 )
@@ -15,10 +13,6 @@ var (
 
 func main() {
 	flag.Parse()
-	if *helpFlag || len(os.Args) == 1 {
-		fmt.Print(client.HelpMsg)
-		return
-	}
-	s := client.NewSwitch(os.Args, *backendURIFlag)
+	s := client.NewSwitch(*helpFlag, *backendURIFlag)
 	s.Switch()
 }
