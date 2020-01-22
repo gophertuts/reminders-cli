@@ -1,22 +1,20 @@
 package controllers
 
 import (
-	"log"
+	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
-
-	"github.com/gophertuts/reminders-cli/server/services"
 )
 
 type deleter interface {
-	Delete(ids []int) services.IDsResponse
+	Delete(ids []int) error
 }
 
 func deleteReminders(service deleter) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ids := parseIDsParam(r.Context())
-		idsRes := service.Delete(ids)
-		if len(idsRes.NotFoundIDs) > 0 {
-			log.Printf("could not delete ids: %v\n", idsRes.NotFoundIDs)
+		err := service.Delete(ids)
+		if err != nil {
+			transport.SendError(w, err, http.StatusBadRequest)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})

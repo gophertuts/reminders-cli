@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"time"
@@ -82,20 +83,29 @@ type ReminderCreateBody struct {
 }
 
 // Create creates a new Reminder
-func (s Reminders) Create(reminderBody ReminderCreateBody) models.Reminder {
+func (s Reminders) Create(body ReminderCreateBody) (models.Reminder, error) {
 	nextID := s.repo.NextID()
+	if body.Title == "" {
+		return models.Reminder{}, errors.New("title cannot be empty")
+	}
+	if body.Message == "" {
+		return models.Reminder{}, errors.New("body cannot be empty")
+	}
+	if body.Duration == 0 {
+		return models.Reminder{}, errors.New("duration cannot be 0")
+	}
 	reminder := models.Reminder{
 		ID:         nextID,
-		Title:      reminderBody.Title,
-		Message:    reminderBody.Message,
-		Duration:   reminderBody.Duration,
+		Title:      body.Title,
+		Message:    body.Message,
+		Duration:   body.Duration,
 		CreatedAt:  time.Now(),
 		ModifiedAt: time.Now(),
 	}
 	index := len(s.Snapshot.All)
 	s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
 	s.Snapshot.UnCompleted[reminder.ID] = map[int]models.Reminder{index: reminder}
-	return reminder
+	return reminder, nil
 }
 
 // ReminderEditBody represents the model for editing a reminder
@@ -113,15 +123,23 @@ func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 		err := fmt.Errorf("could not find reminder with id: %d", reminderBody.ID)
 		return models.Reminder{}, err
 	}
+	changed := false
 	index, reminder := s.Snapshot.All.flatten(reminderBody.ID)
 	if strings.TrimSpace(reminderBody.Title) != "" {
 		reminder.Title = reminderBody.Title
+		changed = true
 	}
 	if strings.TrimSpace(reminderBody.Message) != "" {
 		reminder.Message = reminderBody.Message
+		changed = true
 	}
 	if reminderBody.Duration != 0 {
 		reminder.Duration = reminderBody.Duration
+		changed = true
+	}
+	if !changed {
+		err := errors.New("reminder must have at least 1 property to be edited")
+		return models.Reminder{}, err
 	}
 	reminder.ModifiedAt = time.Now()
 	s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
@@ -134,39 +152,42 @@ func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 }
 
 // Fetch fetches a list of reminders
-func (s Reminders) Fetch(ids []int) []models.Reminder {
+func (s Reminders) Fetch(ids []int) ([]models.Reminder, error) {
 	reminders := []models.Reminder{}
+	var notFound []int
 	for _, id := range ids {
 		_, ok := s.Snapshot.All[id]
 		if !ok {
-			// TODO: return an error
+			notFound = append(notFound, id)
+			continue
 		}
 		_, reminder := s.Snapshot.All.flatten(id)
 		reminders = append(reminders, reminder)
 	}
-	return reminders
-}
-
-// IDsResponse represents response in form of deleted and not found ids
-type IDsResponse struct {
-	NotFoundIDs []int
-	DeletedIDs  []int
+	if len(notFound) > 0 {
+		return []models.Reminder{}, fmt.Errorf("could not find ids: %v", notFound)
+	}
+	return reminders, nil
 }
 
 // Delete deletes a list of reminders and persists the changes
-func (s Reminders) Delete(ids []int) IDsResponse {
-	var idsRes IDsResponse
+func (s Reminders) Delete(ids []int) error {
+	var notFound []int
 	for _, id := range ids {
 		_, ok := s.Snapshot.All[id]
 		if !ok {
-			idsRes.NotFoundIDs = append(idsRes.NotFoundIDs, id)
-		} else {
-			idsRes.DeletedIDs = append(idsRes.DeletedIDs, id)
-			delete(s.Snapshot.All, id)
-			delete(s.Snapshot.UnCompleted, id)
+			notFound = append(notFound, id)
 		}
 	}
-	return idsRes
+	if len(notFound) > 0 {
+		return fmt.Errorf("could not find ids: %v", notFound)
+	}
+
+	for _, id := range ids {
+		delete(s.Snapshot.All, id)
+		delete(s.Snapshot.UnCompleted, id)
+	}
+	return nil
 }
 
 // save saves the current reminders snapshot

@@ -1,7 +1,8 @@
 package controllers
 
 import (
-	"log"
+	"encoding/json"
+	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 	"time"
 
@@ -21,7 +22,9 @@ func editReminder(service editor) http.Handler {
 			Message  string        `json:"message"`
 			Duration time.Duration `json:"duration"`
 		}
-		jsonDecode(r.Body, &body)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			transport.SendError(w, err, http.StatusInternalServerError)
+		}
 		reminder, err := service.Edit(services.ReminderEditBody{
 			ID:       id,
 			Title:    body.Title,
@@ -29,8 +32,8 @@ func editReminder(service editor) http.Handler {
 			Duration: body.Duration,
 		})
 		if err != nil {
-			log.Fatalf("could not edit reminder: %v", err)
+			transport.SendError(w, err, http.StatusBadRequest)
 		}
-		jsonEncode(w, reminder, http.StatusOK)
+		transport.SendJSON(w, reminder, http.StatusOK)
 	})
 }

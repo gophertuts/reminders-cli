@@ -12,17 +12,17 @@ import (
 	"github.com/gophertuts/reminders-cli/server/services"
 )
 
-// App represents the server (backend) application
-type App struct {
+// Backend represents the server (backend) API application
+type Backend struct {
 	server  *http.Server
 	service *services.Reminders
 }
 
-// New initializes and creates a new server App
-func New(addr string, service *services.Reminders) *App {
+// New initializes and creates a new server backend API
+func New(addr string, service *services.Reminders) *Backend {
 	cfg := controllers.RouterConfig{Service: service}
 	router := controllers.NewRouter(cfg)
-	return &App{
+	return &Backend{
 		server: &http.Server{
 			Addr:    addr,
 			Handler: router,
@@ -32,14 +32,14 @@ func New(addr string, service *services.Reminders) *App {
 }
 
 // Start starts the initialized server (backend) application
-func (a *App) Start() error {
-	log.Printf("application started on address %s\n", a.server.Addr)
-	err := a.service.Populate()
+func (b *Backend) Start() error {
+	log.Printf("application started on address %s\n", b.server.Addr)
+	err := b.service.Populate()
 	if err != nil {
 		return models.WrapError("could not initialize reminders service", err)
 	}
 
-	err = a.server.ListenAndServe()
+	err = b.server.ListenAndServe()
 	if err == http.ErrServerClosed {
 		log.Println("http server is closed")
 		return nil
@@ -48,13 +48,13 @@ func (a *App) Start() error {
 }
 
 // Stop gracefully stops the server (backend) application
-func (a *App) Stop() error {
+func (b *Backend) Stop() error {
 	timeout := 2 * time.Second
 	done, err := make(chan struct{}), make(chan error)
 
 	go func() {
 		log.Println("shutting down the http server")
-		if e := a.server.Shutdown(context.Background()); e != nil {
+		if e := b.server.Shutdown(context.Background()); e != nil {
 			err <- models.WrapError("error on server shutdown", e)
 		}
 		close(done)

@@ -2,10 +2,7 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 )
@@ -38,20 +35,4 @@ func parseIDsParam(ctx context.Context) []int {
 		res = append(res, n)
 	}
 	return res
-}
-
-// jsonEncode encodes data into json
-func jsonEncode(w http.ResponseWriter, v interface{}, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(&v); err != nil {
-		log.Fatalf("could not encode json: %v", err)
-	}
-}
-
-// jsonDecode decodes json into data
-func jsonDecode(r io.Reader, v interface{}) {
-	if err := json.NewDecoder(r).Decode(v); err != nil {
-		log.Fatalf("could not decode json: %v", err)
-	}
 }

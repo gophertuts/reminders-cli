@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"encoding/json"
+	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 	"time"
 
@@ -9,7 +11,7 @@ import (
 )
 
 type creator interface {
-	Create(reminderBody services.ReminderCreateBody) models.Reminder
+	Create(reminderBody services.ReminderCreateBody) (models.Reminder, error)
 }
 
 func createReminder(service creator) http.Handler {
@@ -19,12 +21,18 @@ func createReminder(service creator) http.Handler {
 			Message  string        `json:"message"`
 			Duration time.Duration `json:"duration"`
 		}
-		jsonDecode(r.Body, &body)
-		reminder := service.Create(services.ReminderCreateBody{
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			transport.SendError(w, err, http.StatusInternalServerError)
+		}
+		reminder, err := service.Create(services.ReminderCreateBody{
 			Title:    body.Title,
 			Message:  body.Message,
 			Duration: body.Duration,
 		})
-		jsonEncode(w, reminder, http.StatusCreated)
+		if err != nil {
+			transport.SendError(w, err, http.StatusBadRequest)
+			return
+		}
+		transport.SendJSON(w, reminder, http.StatusCreated)
 	})
 }
