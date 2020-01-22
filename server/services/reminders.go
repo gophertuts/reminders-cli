@@ -13,18 +13,31 @@ const (
 	retryPeriod = time.Minute
 )
 
+// RemindersMap represents the data structure for in-memory reminders collection
+type RemindersMap map[int]map[int]models.Reminder
+
+// flatten assumes the map has only one value and reads it and retrieves the key and value
+func (rMap RemindersMap) flatten(id int) (int, models.Reminder) {
+	var index int
+	var reminder models.Reminder
+	for i, r := range rMap[id] {
+		index = i
+		reminder = r
+	}
+	return index, reminder
+}
+
 // ReminderRepository represents the Reminder repository
 type ReminderRepository interface {
 	Save([]models.Reminder) (int, error)
-	Filter(filterFn func(reminder models.Reminder) bool) (map[int]models.Reminder, map[int]int)
+	Filter(filterFn func(reminder models.Reminder) bool) (RemindersMap, error)
 	NextID() int
 }
 
 // Snapshot represents current service in memory state
 type Snapshot struct {
-	All           map[int]models.Reminder
-	UnCompleted   map[int]models.Reminder
-	OriginalOrder map[int]int
+	All         RemindersMap
+	UnCompleted RemindersMap
 }
 
 // Reminders represents the Reminders service
@@ -34,19 +47,31 @@ type Reminders struct {
 }
 
 // NewReminders creates a new instance of Reminders service
-func NewReminders(repo ReminderRepository) Reminders {
-	all, originalOrder := repo.Filter(nil)
-	unCompleted, _ := repo.Filter(func(r models.Reminder) bool {
-		return r.ModifiedAt.Add(r.Duration).UnixNano() > time.Now().UnixNano()
-	})
-	return Reminders{
+func NewReminders(repo ReminderRepository) *Reminders {
+	return &Reminders{
 		repo: repo,
 		Snapshot: Snapshot{
-			All:           all,
-			UnCompleted:   unCompleted,
-			OriginalOrder: originalOrder,
+			All:         RemindersMap{},
+			UnCompleted: RemindersMap{},
 		},
 	}
+}
+
+// Populate populates the reminders service internal state with data from db file
+func (s *Reminders) Populate() error {
+	all, err := s.repo.Filter(nil)
+	if err != nil {
+		return models.WrapError("could not get all reminders", err)
+	}
+	unCompleted, err := s.repo.Filter(func(r models.Reminder) bool {
+		return r.ModifiedAt.Add(r.Duration).UnixNano() > time.Now().UnixNano()
+	})
+	if err != nil {
+		return models.WrapError("could not get uncompleted reminders", err)
+	}
+	s.Snapshot.All = all
+	s.Snapshot.UnCompleted = unCompleted
+	return nil
 }
 
 // ReminderCreateBody represents the model for creating a reminder
@@ -57,18 +82,19 @@ type ReminderCreateBody struct {
 }
 
 // Create creates a new Reminder
-func (r Reminders) Create(reminderBody ReminderCreateBody) models.Reminder {
+func (s Reminders) Create(reminderBody ReminderCreateBody) models.Reminder {
+	nextID := s.repo.NextID()
 	reminder := models.Reminder{
-		ID:         r.repo.NextID(),
+		ID:         nextID,
 		Title:      reminderBody.Title,
 		Message:    reminderBody.Message,
 		Duration:   reminderBody.Duration,
 		CreatedAt:  time.Now(),
 		ModifiedAt: time.Now(),
 	}
-	r.Snapshot.All[reminder.ID] = reminder
-	r.Snapshot.UnCompleted[reminder.ID] = reminder
-	r.Snapshot.OriginalOrder[reminder.ID] = len(r.Snapshot.OriginalOrder)
+	index := len(s.Snapshot.All)
+	s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
+	s.Snapshot.UnCompleted[reminder.ID] = map[int]models.Reminder{index: reminder}
 	return reminder
 }
 
@@ -81,39 +107,42 @@ type ReminderEditBody struct {
 }
 
 // Edit edits a given Reminder
-func (r Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
-	reminder, ok := r.Snapshot.All[reminderBody.ID]
+func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
+	_, ok := s.Snapshot.All[reminderBody.ID]
 	if !ok {
 		err := fmt.Errorf("could not find reminder with id: %d", reminderBody.ID)
 		return models.Reminder{}, err
 	}
+	index, reminder := s.Snapshot.All.flatten(reminderBody.ID)
 	if strings.TrimSpace(reminderBody.Title) != "" {
 		reminder.Title = reminderBody.Title
 	}
 	if strings.TrimSpace(reminderBody.Message) != "" {
 		reminder.Message = reminderBody.Message
 	}
-	if reminderBody.Duration > 0 {
+	if reminderBody.Duration != 0 {
 		reminder.Duration = reminderBody.Duration
 	}
 	reminder.ModifiedAt = time.Now()
-	r.Snapshot.All[reminder.ID] = reminder
+	s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
 	if reminder.ModifiedAt.UnixNano() < time.Now().Add(reminderBody.Duration).UnixNano() {
-		r.Snapshot.UnCompleted[reminder.ID] = reminder
+		s.Snapshot.UnCompleted[reminder.ID] = map[int]models.Reminder{index: reminder}
 	} else {
-		delete(r.Snapshot.UnCompleted, reminder.ID)
+		delete(s.Snapshot.UnCompleted, reminder.ID)
 	}
 	return reminder, nil
 }
 
 // Fetch fetches a list of reminders
-func (r Reminders) Fetch(ids []int) []models.Reminder {
+func (s Reminders) Fetch(ids []int) []models.Reminder {
 	reminders := []models.Reminder{}
 	for _, id := range ids {
-		reminder, ok := r.Snapshot.All[id]
-		if ok {
-			reminders = append(reminders, reminder)
+		_, ok := s.Snapshot.All[id]
+		if !ok {
+			// TODO: return an error
 		}
+		_, reminder := s.Snapshot.All.flatten(id)
+		reminders = append(reminders, reminder)
 	}
 	return reminders
 }
@@ -125,67 +154,60 @@ type IDsResponse struct {
 }
 
 // Delete deletes a list of reminders and persists the changes
-func (r Reminders) Delete(ids []int) IDsResponse {
+func (s Reminders) Delete(ids []int) IDsResponse {
 	var idsRes IDsResponse
 	for _, id := range ids {
-		_, ok := r.Snapshot.All[id]
+		_, ok := s.Snapshot.All[id]
 		if !ok {
 			idsRes.NotFoundIDs = append(idsRes.NotFoundIDs, id)
 		} else {
 			idsRes.DeletedIDs = append(idsRes.DeletedIDs, id)
-			delete(r.Snapshot.All, id)
-			delete(r.Snapshot.UnCompleted, id)
+			delete(s.Snapshot.All, id)
+			delete(s.Snapshot.UnCompleted, id)
 		}
 	}
 	return idsRes
 }
 
 // save saves the current reminders snapshot
-func (r Reminders) save() {
-	var reminders []models.Reminder
-	if len(r.Snapshot.All) == len(r.Snapshot.OriginalOrder) {
-		reminders = make([]models.Reminder, len(r.Snapshot.All))
-		for id, i := range r.Snapshot.OriginalOrder {
-			reminders[i] = r.Snapshot.All[id]
-		}
-	} else {
-		for id := range r.Snapshot.OriginalOrder {
-			reminder, ok := r.Snapshot.All[id]
-			if ok {
-				reminders = append(reminders, reminder)
-			} else {
-				delete(r.Snapshot.OriginalOrder, id)
-			}
+func (s Reminders) save() error {
+	reminders := make([]models.Reminder, len(s.Snapshot.All))
+	for _, reminderMap := range s.Snapshot.All {
+		for i, reminder := range reminderMap {
+			reminders[i] = reminder
 		}
 	}
-	n, err := r.repo.Save(reminders)
+
+	n, err := s.repo.Save(reminders)
 	if err != nil {
-		log.Fatalf("could not save snapshot: %v", err)
+		return models.WrapError("could not save snapshot", err)
 	}
 	if n > 0 {
 		log.Printf("successfully saved snapshot: %d reminders", len(reminders))
 	}
+	return nil
 }
 
 // GetSnapshot fetches the current service snapshot
-func (r Reminders) snapshot() Snapshot {
-	return r.Snapshot
+func (s Reminders) snapshot() Snapshot {
+	return s.Snapshot
 }
 
 // snapshotGrooming clears the current snapshot from notified reminders
-func (r Reminders) snapshotGrooming(notifiedReminders ...models.Reminder) {
+func (s Reminders) snapshotGrooming(notifiedReminders ...models.Reminder) {
 	if len(notifiedReminders) > 0 {
 		log.Printf("snapshot grooming: %d record(s)", len(notifiedReminders))
 	}
 	for _, reminder := range notifiedReminders {
-		delete(r.Snapshot.UnCompleted, reminder.ID)
+		delete(s.Snapshot.UnCompleted, reminder.ID)
 		reminder.Duration = -time.Hour
-		r.Snapshot.All[reminder.ID] = reminder
+		index, _ := s.Snapshot.All.flatten(reminder.ID)
+		s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
 	}
 }
 
 // retry retries a reminder by resetting its duration
-func (r Reminders) retry(reminder models.Reminder, d time.Duration) {
+func (s Reminders) retry(reminder models.Reminder, d time.Duration) {
 	reminder.ModifiedAt = time.Now()
 	if d <= 0 {
 		reminder.Duration = retryPeriod
@@ -197,6 +219,7 @@ func (r Reminders) retry(reminder models.Reminder, d time.Duration) {
 		reminder.ID,
 		reminder.Duration.String(),
 	)
-	r.Snapshot.All[reminder.ID] = reminder
-	r.Snapshot.UnCompleted[reminder.ID] = reminder
+	index, _ := s.Snapshot.All.flatten(reminder.ID)
+	s.Snapshot.All[reminder.ID] = map[int]models.Reminder{index: reminder}
+	s.Snapshot.UnCompleted[reminder.ID] = map[int]models.Reminder{index: reminder}
 }

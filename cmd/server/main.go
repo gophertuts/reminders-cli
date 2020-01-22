@@ -8,6 +8,7 @@ import (
 
 	"github.com/gophertuts/reminders-cli/server"
 	"github.com/gophertuts/reminders-cli/server/repositories"
+	"github.com/gophertuts/reminders-cli/server/services"
 )
 
 var (
@@ -20,17 +21,24 @@ var (
 func main() {
 	flag.Parse()
 	db := repositories.NewDB(*dbFlag, *dbCfgFlag)
-	appCfg := server.AppConfig{
-		Addr:        *addrFlag,
-		NotifierURI: *notifierURIFlag,
-		DB:          db,
+	repo := repositories.NewReminder(db)
+	service := services.NewReminders(repo)
+	backend := server.New(*addrFlag, service)
+	saver := services.NewSaver(service)
+	notifier := services.NewNotifier(*notifierURIFlag, service)
+
+	if err := db.Start(); err != nil {
+		log.Fatalf("could not start file database service: %v", err)
 	}
-	application := server.New(appCfg)
+
+	go saver.Start()
+	go notifier.Start()
 	go func() {
-		err := application.Start()
-		if err != nil {
-			log.Fatalf("could not start application: %v", err)
+		if err := backend.Start(); err != nil {
+			log.Fatalf("could not start backend api service: %v", err)
 		}
 	}()
-	server.ListenForSignals([]os.Signal{syscall.SIGINT, syscall.SIGTERM}, application, db)
+
+	signals := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
+	server.ListenForSignals(signals, backend, saver, notifier, db)
 }

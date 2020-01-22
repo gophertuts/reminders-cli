@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
@@ -28,43 +27,41 @@ func NewHTTPClient(uri string) HTTPClient {
 }
 
 // Notify pushes a given reminder to the notifier service
-// if nil is returned, means the record must be retried
-func (c HTTPClient) Notify(reminder models.Reminder) (*models.Reminder, time.Duration) {
-	res, err := c.client.Get(c.notifierURI + "/health")
-	if err != nil {
-		log.Printf("notifier service is not available: %v\n", err)
-		return &reminder, 0
-	}
-
+// if the reminder is nil, means the record must be retried
+func (c HTTPClient) Notify(reminder models.Reminder) (time.Duration, error) {
 	var notifierResponse struct {
 		ActivationType  string `json:"activationType"`
 		ActivationValue string `json:"activationValue"`
 	}
 	bs, err := json.Marshal(reminder)
 	if err != nil {
-		log.Printf("could not marshal json: %v\n", err)
-		// means FORGET ABOUT THIS RECORD
-		return nil, 0
+		e := models.WrapError("could not marshal json", err)
+		return 0, e
 	}
-	res, err = c.client.Post(
+
+	res, err := c.client.Post(
 		c.notifierURI+"/notify",
 		"application/json",
 		bytes.NewReader(bs),
 	)
 	if err != nil {
-		log.Printf("something went wrong with the notifier: %v\n", err)
-		return &reminder, 0
+		e := models.WrapError("notifier service is not available", err)
+		return 0, e
 	}
+
 	err = json.NewDecoder(res.Body).Decode(&notifierResponse)
 	if err != nil && err != io.EOF {
-		log.Printf("could not decode notifier response: %v\n", err)
+		e := models.WrapError("could not decode notifier response", err)
+		return 0, e
 	}
-	if notifierResponse.ActivationType == "replied" {
-		d, err := time.ParseDuration(notifierResponse.ActivationValue)
-		if err != nil {
-			log.Printf("could not parse input duration: %v\n", err)
-		}
-		return &reminder, d
+	if notifierResponse.ActivationType != "replied" {
+		return 0, nil
 	}
-	return nil, 0
+
+	d, err := time.ParseDuration(notifierResponse.ActivationValue)
+	if err != nil && d != 0 {
+		e := models.WrapError("could not parse notifier duration", err)
+		return 0, e
+	}
+	return d, nil
 }

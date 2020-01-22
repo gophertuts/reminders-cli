@@ -8,7 +8,7 @@ import (
 )
 
 type saver interface {
-	save()
+	save() error
 }
 
 // BackgroundSaver represents the reminder background saver
@@ -17,8 +17,8 @@ type BackgroundSaver struct {
 	service saver
 }
 
-// NewBackgroundSaver creates a new instance of BackgroundSaver
-func NewBackgroundSaver(service saver) *BackgroundSaver {
+// NewSaver creates a new instance of BackgroundSaver
+func NewSaver(service saver) *BackgroundSaver {
 	ticker := time.NewTicker(30 * time.Second)
 	return &BackgroundSaver{
 		ticker:  ticker,
@@ -32,21 +32,28 @@ func (s *BackgroundSaver) Start() {
 	for {
 		select {
 		case <-s.ticker.C:
-			s.service.save()
+			err := s.service.save()
+			if err != nil {
+				log.Printf("could not save records in background: %v", err)
+			}
 		}
 	}
 }
 
 // Stop stops the created Watcher
-func (s *BackgroundSaver) Stop() {
+func (s *BackgroundSaver) Stop() error {
 	s.ticker.Stop()
-	s.service.save()
+	err := s.service.save()
+	if err != nil {
+		return err
+	}
 	log.Println("background saver stopped")
+	return nil
 }
 
 // HTTPNotifierClient represents the HTTP client for communicating with the notifier server
 type HTTPNotifierClient interface {
-	Notify(reminder models.Reminder) (*models.Reminder, time.Duration)
+	Notify(reminder models.Reminder) (time.Duration, error)
 }
 
 type snapshotManager interface {
@@ -57,19 +64,21 @@ type snapshotManager interface {
 
 // BackgroundNotifier represents the reminder background saver
 type BackgroundNotifier struct {
-	ticker  *time.Ticker
-	service snapshotManager
-	Client  HTTPNotifierClient
+	ticker   *time.Ticker
+	service  snapshotManager
+	notified chan models.Reminder
+	Client   HTTPNotifierClient
 }
 
-// NewBackgroundNotifier creates a new instance of BackgroundNotifier
-func NewBackgroundNotifier(notifierURI string, service snapshotManager) *BackgroundNotifier {
+// NewNotifier creates a new instance of BackgroundNotifier
+func NewNotifier(notifierURI string, service snapshotManager) *BackgroundNotifier {
 	ticker := time.NewTicker(1 * time.Second)
 	httpClient := NewHTTPClient(notifierURI)
 	return &BackgroundNotifier{
-		ticker:  ticker,
-		service: service,
-		Client:  httpClient,
+		ticker:   ticker,
+		service:  service,
+		notified: make(chan models.Reminder),
+		Client:   httpClient,
 	}
 }
 
@@ -80,35 +89,45 @@ func (s *BackgroundNotifier) Start() {
 		select {
 		case <-s.ticker.C:
 			snapshot := s.service.snapshot()
-			notified := map[int]models.Reminder{}
-			for _, reminder := range snapshot.UnCompleted {
+			for id := range snapshot.UnCompleted {
+				_, reminder := snapshot.UnCompleted.flatten(id)
 				reminderTick := reminder.ModifiedAt.Add(reminder.Duration).UnixNano()
 				nowTick := time.Now().UnixNano()
 				deltaTick := time.Now().Add(time.Second).UnixNano()
 				if reminderTick > nowTick && reminderTick < deltaTick {
-					go s.notify(reminder)
-					notified[reminder.ID] = reminder
+					go func() {
+						err := s.notify(reminder)
+						if err != nil {
+							log.Printf("could not notify reminder with id %d", reminder.ID)
+						}
+					}()
 				}
 			}
-			if len(notified) > 0 {
-				log.Printf("notified: %d record(s)\n", len(notified))
-			}
+		case r := <-s.notified:
+			log.Printf("notified reminder with with: %d\n", r.ID)
 		}
 	}
 }
 
 // notify notifies a reminder via the HTTP client
-func (s *BackgroundNotifier) notify(r models.Reminder) {
-	retry, d := s.Client.Notify(r)
-	if retry != nil {
-		s.service.retry(r, d)
+func (s *BackgroundNotifier) notify(r models.Reminder) error {
+	retryAfter, err := s.Client.Notify(r)
+	if err != nil {
+		return models.WrapError("could not notify reminder", err)
+	}
+
+	if retryAfter != 0 {
+		s.service.retry(r, retryAfter)
 	} else {
 		s.service.snapshotGrooming(r)
+		s.notified <- r
 	}
+	return nil
 }
 
 // Stop stops the created Watcher
-func (s *BackgroundNotifier) Stop() {
+func (s *BackgroundNotifier) Stop() error {
 	s.ticker.Stop()
 	log.Println("background notifier stopped")
+	return nil
 }

@@ -87,9 +87,9 @@ func (s Switch) create() func(string) error {
 
 		res, err := s.client.Create(*t, *m, *d)
 		if err != nil {
-			return err
+			return wrapError("could not create reminder", err)
 		}
-		fmt.Printf("reminder created successfully:\n%s\n", string(res))
+		fmt.Printf("reminder created successfully:\n%s", string(res))
 		return nil
 	}
 }
@@ -112,9 +112,9 @@ func (s Switch) edit() func(string) error {
 		lastID := ids[len(ids)-1]
 		res, err := s.client.Edit(lastID, *t, *m, *d)
 		if err != nil {
-			return err
+			return wrapError("could not edit reminder", err)
 		}
-		fmt.Printf("reminder edited successfully:\n%s\n", string(res))
+		fmt.Printf("reminder edited successfully:\n%s", string(res))
 		return nil
 	}
 }
@@ -135,9 +135,9 @@ func (s Switch) fetch() func(string) error {
 
 		res, err := s.client.Fetch(ids)
 		if err != nil {
-			return err
+			return wrapError("could not fetch reminder(s)", err)
 		}
-		fmt.Printf("reminders fetched successfully:\n%s\n", string(res))
+		fmt.Printf("reminders fetched successfully:\n%s", string(res))
 		return nil
 	}
 }
@@ -158,7 +158,7 @@ func (s Switch) delete() func(string) error {
 
 		err := s.client.Delete(ids)
 		if err != nil {
-			return err
+			return wrapError("could not delete reminder(s)", err)
 		}
 		fmt.Printf("successfully deleted record(s):\n%v\n", ids)
 		return nil
@@ -181,7 +181,7 @@ func (s Switch) reminderFlags(f *flag.FlagSet) (*string, *string, *time.Duration
 func (s Switch) parseCmd(cmd *flag.FlagSet) error {
 	err := cmd.Parse(os.Args[2:])
 	if err != nil {
-		return err
+		return wrapError("could not parse '"+cmd.Name()+"' flags", err)
 	}
 	return nil
 }

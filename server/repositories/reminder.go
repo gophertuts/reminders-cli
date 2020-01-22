@@ -3,15 +3,15 @@ package repositories
 import (
 	"encoding/json"
 	"io"
-	"log"
 
 	"github.com/gophertuts/reminders-cli/server/models"
+	"github.com/gophertuts/reminders-cli/server/services"
 )
 
 // FileDB represents the file database
 type FileDB interface {
 	io.ReadWriter
-	SizeOf() int
+	Size() int
 	GenerateID() int
 }
 
@@ -21,8 +21,8 @@ type Reminder struct {
 }
 
 // NewReminder creates a new instance of Reminder repository
-func NewReminder(db FileDB) Reminder {
-	return Reminder{
+func NewReminder(db FileDB) *Reminder {
+	return &Reminder{
 		DB: db,
 	}
 }
@@ -41,28 +41,30 @@ func (r Reminder) Save(reminders []models.Reminder) (int, error) {
 }
 
 // Filter filters reminders by a filtering function
-func (r Reminder) Filter(filterFn func(reminder models.Reminder) bool) (map[int]models.Reminder, map[int]int) {
-	bs := make([]byte, r.DB.SizeOf())
+func (r Reminder) Filter(filterFn func(reminder models.Reminder) bool) (services.RemindersMap, error) {
+	bs := make([]byte, r.DB.Size())
 	n, err := r.DB.Read(bs)
 	if err != nil {
-		log.Fatalf("could not read from db: %v", err)
+		e := models.WrapError("could not read from db", err)
+		return services.RemindersMap{}, e
 	}
 
 	var reminders []models.Reminder
 	err = json.Unmarshal(bs[:n], &reminders)
 	if err != nil {
-		log.Fatalf("could unrmashal json: %v", err)
+		e := models.WrapError("could not unmarshal json", err)
+		return services.RemindersMap{}, e
 	}
 
-	remindersMap := map[int]models.Reminder{}
-	originalOrder := map[int]int{}
+	res := services.RemindersMap{}
 	for i, reminder := range reminders {
 		if filterFn == nil || filterFn(reminder) {
-			remindersMap[reminder.ID] = reminder
-			originalOrder[reminder.ID] = i
+			reminderMap := map[int]models.Reminder{}
+			reminderMap[i] = reminder
+			res[reminder.ID] = reminderMap
 		}
 	}
-	return remindersMap, originalOrder
+	return res, nil
 }
 
 // NextID fetches the next DB AUTOINCREMENT id

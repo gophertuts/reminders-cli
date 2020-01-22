@@ -19,24 +19,6 @@ type reminderBody struct {
 	Duration time.Duration `json:"duration"`
 }
 
-// httpRoundTripper represents the HTTP interceptor for the CLI HTTP client
-type httpRoundTripper struct {
-	healthURI         string
-	originalTransport http.RoundTripper
-}
-
-func (roundTripper *httpRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	res, err := http.Get(roundTripper.healthURI)
-	if err != nil || res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("backend api is not available")
-	}
-	res, err = roundTripper.originalTransport.RoundTrip(req)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
 // HTTPClient represents the HTTP client which communicates with reminders backend API
 type HTTPClient struct {
 	client     *http.Client
@@ -45,15 +27,9 @@ type HTTPClient struct {
 
 // NewHTTPClient creates a new instance of HTTPClient
 func NewHTTPClient(uri string) HTTPClient {
-	roundTripper := &httpRoundTripper{
-		healthURI:         uri + "/health",
-		originalTransport: http.DefaultTransport,
-	}
 	return HTTPClient{
 		BackendURI: uri,
-		client: &http.Client{
-			Transport: roundTripper,
-		},
+		client:     &http.Client{},
 	}
 }
 
@@ -82,7 +58,7 @@ func (c HTTPClient) Edit(id string, title, message string, duration time.Duratio
 	}
 	return c.apiCall(
 		http.MethodPatch,
-		"/reminders"+id,
+		"/reminders/"+id,
 		&requestBody,
 		http.StatusOK,
 	)
@@ -115,18 +91,29 @@ func (c HTTPClient) Delete(ids []string) error {
 func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) ([]byte, error) {
 	bs, err := json.Marshal(body)
 	if err != nil {
-		return nil, err
+		e := wrapError("could not marshal request body", err)
+		return nil, e
 	}
 	req, err := http.NewRequest(method, c.BackendURI+path, bytes.NewReader(bs))
 	if err != nil {
-		return []byte{}, err
+		e := wrapError("could not create request", err)
+		return []byte{}, e
 	}
 
 	res, err := c.client.Do(req)
 	if err != nil {
+		e := wrapError("could not make http call", err)
+		return []byte{}, e
+	}
+
+	bs, err = c.readResBody(res.Body)
+	if err != nil {
 		return []byte{}, err
 	}
 	if res.StatusCode != resCode {
+		if len(bs) > 0 {
+			fmt.Printf("got this response body:\n%s\n", string(bs))
+		}
 		return []byte{}, fmt.Errorf(
 			"expected response code: %d, got: %d",
 			resCode,
@@ -134,19 +121,22 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 		)
 	}
 
-	return c.readBody(res.Body)
+	return bs, err
 }
 
-func (c HTTPClient) readBody(b io.Reader) ([]byte, error) {
+// readBody reads response body
+func (c HTTPClient) readResBody(b io.Reader) ([]byte, error) {
 	bs, err := ioutil.ReadAll(b)
-	if err != nil {
-		return []byte{}, err
+	if err != nil || len(bs) == 0 {
+		e := wrapError("could not read response body", err)
+		return []byte{}, e
 	}
 
 	var buff bytes.Buffer
 	err = json.Indent(&buff, bs, "", "\t")
 	if err != nil {
-		return []byte{}, err
+		e := wrapError("could not indent json", err)
+		return []byte{}, e
 	}
 
 	return buff.Bytes(), nil
