@@ -7,13 +7,6 @@ import (
 	"time"
 )
 
-const (
-	titleFlag    = "title"
-	messageFlag  = "message"
-	durationFlag = "duration"
-	idFlag       = "id"
-)
-
 // flagList represents []int values for CLI flags
 type flagList []string
 
@@ -32,25 +25,28 @@ type BackendHTTPClient interface {
 	Edit(id string, title, message string, duration time.Duration) ([]byte, error)
 	Fetch(ids []string) ([]byte, error)
 	Delete(ids []string) error
+	Healthy(host string) bool
 }
 
 // NewSwitch creates a new instance of command Switch
 func NewSwitch(uri string) Switch {
 	httpClient := NewHTTPClient(uri)
-	s := Switch{client: httpClient}
+	s := Switch{client: httpClient, backendAPIURL: uri}
 	s.commands = map[string]func() func(string) error{
 		"create": s.create,
 		"edit":   s.edit,
 		"fetch":  s.fetch,
 		"delete": s.delete,
+		"health": s.health,
 	}
 	return s
 }
 
 // Switch represents CLI command switch
 type Switch struct {
-	client   BackendHTTPClient
-	commands map[string]func() func(string) error
+	client        BackendHTTPClient
+	backendAPIURL string
+	commands      map[string]func() func(string) error
 }
 
 // Switch analyses the CLI args and executes the given command
@@ -72,7 +68,7 @@ func (s Switch) Help() {
 	fmt.Printf("Usage of %s:\n<command> [<args>]\n%s", os.Args[0], help)
 }
 
-// create represents the create command
+// create represents the create command which creates a new reminder
 func (s Switch) create() func(string) error {
 	return func(cmdName string) error {
 		createCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
@@ -94,12 +90,12 @@ func (s Switch) create() func(string) error {
 	}
 }
 
-// edit represents the edit command
+// edit represents the edit command which edit a reminder
 func (s Switch) edit() func(string) error {
 	return func(cmdName string) error {
 		ids := flagList{}
 		editCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		editCmd.Var(&ids, idFlag, "The ID (int) of the reminder to edit")
+		editCmd.Var(&ids, "id", "The ID (int) of the reminder to edit")
 		t, m, d := s.reminderFlags(editCmd)
 
 		if err := s.checkArgs(2); err != nil {
@@ -119,12 +115,12 @@ func (s Switch) edit() func(string) error {
 	}
 }
 
-// fetch represents the fetch command
+// fetch represents the fetch command which fetches a list of reminders
 func (s Switch) fetch() func(string) error {
 	return func(cmdName string) error {
 		ids := flagList{}
 		fetchCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		fetchCmd.Var(&ids, idFlag, "List of reminder IDs (int) to fetch")
+		fetchCmd.Var(&ids, "id", "List of reminder IDs (int) to fetch")
 
 		if err := s.checkArgs(1); err != nil {
 			return err
@@ -142,12 +138,12 @@ func (s Switch) fetch() func(string) error {
 	}
 }
 
-// delete represents the delete command
+// delete represents the delete command which deletes a reminder
 func (s Switch) delete() func(string) error {
 	return func(cmdName string) error {
 		ids := flagList{}
 		deleteCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
-		deleteCmd.Var(&ids, idFlag, "List of reminder IDs (int) to delete")
+		deleteCmd.Var(&ids, "id", "List of reminder IDs (int) to delete")
 
 		if err := s.checkArgs(1); err != nil {
 			return err
@@ -165,14 +161,32 @@ func (s Switch) delete() func(string) error {
 	}
 }
 
+// health represents the health command which prints whether a host is healthy or not
+func (s Switch) health() func(string) error {
+	return func(cmdName string) error {
+		var host string
+		healthCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+		healthCmd.StringVar(&host, "host", s.backendAPIURL, "Host to ping for health")
+		if err := s.parseCmd(healthCmd); err != nil {
+			return err
+		}
+		if !s.client.Healthy(host) {
+			fmt.Printf("host: %s is down\n", host)
+		} else {
+			fmt.Printf("host: %s is up and running\n", host)
+		}
+		return nil
+	}
+}
+
 // reminderFlags configures reminder specific flags for a command
 func (s Switch) reminderFlags(f *flag.FlagSet) (*string, *string, *time.Duration) {
 	t, m, d := "", "", time.Duration(0)
-	f.StringVar(&t, titleFlag, "", "Reminder title")
+	f.StringVar(&t, "title", "", "Reminder title")
 	f.StringVar(&t, "t", "", "Reminder title")
-	f.StringVar(&m, messageFlag, "", "Reminder message")
+	f.StringVar(&m, "message", "", "Reminder message")
 	f.StringVar(&m, "m", "", "Reminder message")
-	f.DurationVar(&d, durationFlag, 0, "Reminder time")
+	f.DurationVar(&d, "duration", 0, "Reminder time")
 	f.DurationVar(&d, "d", 0, "Reminder time")
 	return &t, &m, &d
 }

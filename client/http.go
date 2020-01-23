@@ -87,6 +87,15 @@ func (c HTTPClient) Delete(ids []string) error {
 	return err
 }
 
+// Healthy checks whether a given host is up and running
+func (c HTTPClient) Healthy(host string) bool {
+	res, err := http.Get(host + "/health")
+	if err != nil || res.StatusCode != http.StatusOK {
+		return false
+	}
+	return true
+}
+
 // apiCall makes a new backend api call
 func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) ([]byte, error) {
 	bs, err := json.Marshal(body)
