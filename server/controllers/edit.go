@@ -16,14 +16,19 @@ type editor interface {
 
 func editReminder(service editor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		id := parseIDParam(r.Context())
+		id, err := parseIDParam(r.Context())
+		if err != nil {
+			transport.SendError(w, err)
+			return
+		}
 		var body struct {
 			Title    string        `json:"title"`
 			Message  string        `json:"message"`
 			Duration time.Duration `json:"duration"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			transport.SendError(w, err, http.StatusInternalServerError)
+			transport.SendError(w, models.InvalidJSONError{Message: err.Error()})
+			return
 		}
 		reminder, err := service.Edit(services.ReminderEditBody{
 			ID:       id,
@@ -32,7 +37,8 @@ func editReminder(service editor) http.Handler {
 			Duration: body.Duration,
 		})
 		if err != nil {
-			transport.SendError(w, err, http.StatusBadRequest)
+			transport.SendError(w, err)
+			return
 		}
 		transport.SendJSON(w, reminder, http.StatusOK)
 	})

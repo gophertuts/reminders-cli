@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"github.com/gophertuts/reminders-cli/server/models"
+	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 	"regexp"
 	"strings"
@@ -101,7 +103,7 @@ func (h RegexpMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := r.Method + r.URL.Path
 	route, ok := h.routesMap[key]
 	if !ok {
-		http.NotFound(w, r)
+		transport.SendError(w, models.NotFoundError{})
 		return
 	}
 	ctx := r.Context()

@@ -13,10 +13,14 @@ type fetcher interface {
 
 func fetchReminders(service fetcher) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ids := parseIDsParam(r.Context())
+		ids, err := parseIDsParam(r.Context())
+		if err != nil {
+			transport.SendError(w, err)
+			return
+		}
 		reminders, err := service.Fetch(ids)
 		if err != nil {
-			transport.SendError(w, err, http.StatusBadRequest)
+			transport.SendError(w, err)
 			return
 		}
 		transport.SendJSON(w, reminders, http.StatusOK)

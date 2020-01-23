@@ -10,8 +10,8 @@ import (
 const (
 	idParamName  = "id"
 	idsParamName = "ids"
-	idParam      = `{` + idParamName + `}:^[1-9]+$`
-	idsParam     = `{` + idsParamName + `}:[1-9]+(,[1-9]+)*`
+	idParam      = `{` + idParamName + `}:^[0-9]+$`
+	idsParam     = `{` + idsParamName + `}:[0-9]+(,[0-9]+)*`
 )
 
 // RemindersService represents the Reminders service

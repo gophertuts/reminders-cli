@@ -2,15 +2,16 @@ package repositories
 
 import (
 	"encoding/json"
-	"io"
-
+	"github.com/gophertuts/reminders-cli/server"
 	"github.com/gophertuts/reminders-cli/server/models"
 	"github.com/gophertuts/reminders-cli/server/services"
+	"io"
 )
 
 // FileDB represents the file database
 type FileDB interface {
 	io.ReadWriter
+	server.Stopper
 	Size() int
 	GenerateID() int
 }

@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"strings"
 	"time"
@@ -86,13 +85,22 @@ type ReminderCreateBody struct {
 func (s Reminders) Create(body ReminderCreateBody) (models.Reminder, error) {
 	nextID := s.repo.NextID()
 	if body.Title == "" {
-		return models.Reminder{}, errors.New("title cannot be empty")
+		err := models.DataValidationError{
+			Message: "title cannot be empty",
+		}
+		return models.Reminder{}, err
 	}
 	if body.Message == "" {
-		return models.Reminder{}, errors.New("body cannot be empty")
+		err := models.DataValidationError{
+			Message: "body cannot be empty",
+		}
+		return models.Reminder{}, err
 	}
 	if body.Duration == 0 {
-		return models.Reminder{}, errors.New("duration cannot be 0")
+		err := models.DataValidationError{
+			Message: "duration cannot be 0",
+		}
+		return models.Reminder{}, err
 	}
 	reminder := models.Reminder{
 		ID:         nextID,
@@ -120,7 +128,9 @@ type ReminderEditBody struct {
 func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
 	_, ok := s.Snapshot.All[reminderBody.ID]
 	if !ok {
-		err := fmt.Errorf("could not find reminder with id: %d", reminderBody.ID)
+		err := models.DataValidationError{
+			Message: fmt.Sprintf("could not find reminder with id: %d", reminderBody.ID),
+		}
 		return models.Reminder{}, err
 	}
 	changed := false
@@ -138,7 +148,9 @@ func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 		changed = true
 	}
 	if !changed {
-		err := errors.New("reminder must have at least 1 property to be edited")
+		err := models.FormatValidationError{
+			Message: "body must contain at least 1 of: 'title', 'message', 'duration'",
+		}
 		return models.Reminder{}, err
 	}
 	reminder.ModifiedAt = time.Now()
@@ -165,7 +177,10 @@ func (s Reminders) Fetch(ids []int) ([]models.Reminder, error) {
 		reminders = append(reminders, reminder)
 	}
 	if len(notFound) > 0 {
-		return []models.Reminder{}, fmt.Errorf("could not find ids: %v", notFound)
+		err := models.FormatValidationError{
+			Message: fmt.Sprintf("could not find ids: %v", notFound),
+		}
+		return []models.Reminder{}, err
 	}
 	return reminders, nil
 }
@@ -180,7 +195,9 @@ func (s Reminders) Delete(ids []int) error {
 		}
 	}
 	if len(notFound) > 0 {
-		return fmt.Errorf("could not find ids: %v", notFound)
+		return models.FormatValidationError{
+			Message: fmt.Sprintf("could not find ids: %v", notFound),
+		}
 	}
 
 	for _, id := range ids {

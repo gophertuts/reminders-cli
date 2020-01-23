@@ -22,7 +22,8 @@ func createReminder(service creator) http.Handler {
 			Duration time.Duration `json:"duration"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			transport.SendError(w, err, http.StatusInternalServerError)
+			transport.SendError(w, models.InvalidJSONError{Message: err.Error()})
+			return
 		}
 		reminder, err := service.Create(services.ReminderCreateBody{
 			Title:    body.Title,
@@ -30,7 +31,7 @@ func createReminder(service creator) http.Handler {
 			Duration: body.Duration,
 		})
 		if err != nil {
-			transport.SendError(w, err, http.StatusBadRequest)
+			transport.SendError(w, err)
 			return
 		}
 		transport.SendJSON(w, reminder, http.StatusCreated)
