@@ -1,10 +1,10 @@
 package controllers
 
 import (
-	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 
 	"github.com/gophertuts/reminders-cli/server/models"
+	"github.com/gophertuts/reminders-cli/server/transport"
 )
 
 type fetcher interface {

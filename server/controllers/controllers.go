@@ -3,14 +3,15 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/gophertuts/reminders-cli/server/models"
 	"strconv"
 	"strings"
+
+	"github.com/gophertuts/reminders-cli/server/models"
 )
 
 // ctx param fetches param from context
 func ctxParam(ctx context.Context, key string) urlParam {
-	ps, ok := ctx.Value(ctxKey("ps")).(map[string]urlParam)
+	ps, ok := ctx.Value(ctxKey(paramsKey)).(map[string]urlParam)
 	if !ok {
 		return urlParam{}
 	}

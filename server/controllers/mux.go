@@ -2,12 +2,15 @@ package controllers
 
 import (
 	"context"
-	"github.com/gophertuts/reminders-cli/server/models"
-	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 	"regexp"
 	"strings"
+
+	"github.com/gophertuts/reminders-cli/server/models"
+	"github.com/gophertuts/reminders-cli/server/transport"
 )
+
+const paramsKey = "ps"
 
 // ctxKey represents the context key for accessing it
 type ctxKey string
@@ -108,7 +111,7 @@ func (h RegexpMux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	if len(route.params) != 0 {
-		ctx = context.WithValue(ctx, ctxKey("ps"), route.params)
+		ctx = context.WithValue(ctx, ctxKey(paramsKey), route.params)
 	}
 	route.handler.ServeHTTP(w, r.WithContext(ctx))
 }

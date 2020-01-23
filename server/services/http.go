@@ -3,6 +3,7 @@ package services
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"time"
@@ -21,14 +22,20 @@ func NewHTTPClient(uri string) HTTPClient {
 	return HTTPClient{
 		notifierURI: uri,
 		client: &http.Client{
-			Timeout: 15 * time.Second,
+			Timeout: 20 * time.Second,
 		},
 	}
 }
 
+// NotificationResponse represents OS notification response for background notifier
+type NotificationResponse struct {
+	completed bool
+	duration  time.Duration
+}
+
 // Notify pushes a given reminder to the notifier service
 // if the reminder is nil, means the record must be retried
-func (c HTTPClient) Notify(reminder models.Reminder) (time.Duration, error) {
+func (c HTTPClient) Notify(reminder models.Reminder) (NotificationResponse, error) {
 	var notifierResponse struct {
 		ActivationType  string `json:"activationType"`
 		ActivationValue string `json:"activationValue"`
@@ -36,7 +43,7 @@ func (c HTTPClient) Notify(reminder models.Reminder) (time.Duration, error) {
 	bs, err := json.Marshal(reminder)
 	if err != nil {
 		e := models.WrapError("could not marshal json", err)
-		return 0, e
+		return NotificationResponse{}, e
 	}
 
 	res, err := c.client.Post(
@@ -46,22 +53,27 @@ func (c HTTPClient) Notify(reminder models.Reminder) (time.Duration, error) {
 	)
 	if err != nil {
 		e := models.WrapError("notifier service is not available", err)
-		return 0, e
+		return NotificationResponse{}, e
 	}
-
 	err = json.NewDecoder(res.Body).Decode(&notifierResponse)
 	if err != nil && err != io.EOF {
 		e := models.WrapError("could not decode notifier response", err)
-		return 0, e
-	}
-	if notifierResponse.ActivationType != "replied" {
-		return 0, nil
+		return NotificationResponse{}, e
 	}
 
-	d, err := time.ParseDuration(notifierResponse.ActivationValue)
+	t := notifierResponse.ActivationType
+	v := notifierResponse.ActivationValue
+	if t == "closed" {
+		return NotificationResponse{completed: true}, nil
+	}
+
+	d, err := time.ParseDuration(v)
 	if err != nil && d != 0 {
 		e := models.WrapError("could not parse notifier duration", err)
-		return 0, e
+		return NotificationResponse{}, e
 	}
-	return d, nil
+	if d == 0 {
+		return NotificationResponse{}, errors.New("notification duration must be > 0s")
+	}
+	return NotificationResponse{duration: d}, nil
 }

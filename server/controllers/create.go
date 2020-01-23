@@ -2,12 +2,12 @@ package controllers
 
 import (
 	"encoding/json"
-	"github.com/gophertuts/reminders-cli/server/transport"
 	"net/http"
 	"time"
 
 	"github.com/gophertuts/reminders-cli/server/models"
 	"github.com/gophertuts/reminders-cli/server/services"
+	"github.com/gophertuts/reminders-cli/server/transport"
 )
 
 type creator interface {
