@@ -128,7 +128,7 @@ type ReminderEditBody struct {
 func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) {
 	_, ok := s.Snapshot.All[reminderBody.ID]
 	if !ok {
-		err := models.DataValidationError{
+		err := models.NotFoundError{
 			Message: fmt.Sprintf("could not find reminder with id: %d", reminderBody.ID),
 		}
 		return models.Reminder{}, err
@@ -177,8 +177,8 @@ func (s Reminders) Fetch(ids []int) ([]models.Reminder, error) {
 		reminders = append(reminders, reminder)
 	}
 	if len(notFound) > 0 {
-		err := models.FormatValidationError{
-			Message: fmt.Sprintf("could not find ids: %v", notFound),
+		err := models.NotFoundError{
+			Message: fmt.Sprintf("could not find reminders with ids: %v", notFound),
 		}
 		return []models.Reminder{}, err
 	}
@@ -195,8 +195,8 @@ func (s Reminders) Delete(ids []int) error {
 		}
 	}
 	if len(notFound) > 0 {
-		return models.FormatValidationError{
-			Message: fmt.Sprintf("could not find ids: %v", notFound),
+		return models.NotFoundError{
+			Message: fmt.Sprintf("could not find reminders with ids: %v", notFound),
 		}
 	}
 
@@ -220,7 +220,7 @@ func (s Reminders) save() error {
 	if err != nil {
 		return models.WrapError("could not save snapshot", err)
 	}
-	if n > 0 {
+	if n > 0 && len(reminders) != 0 {
 		log.Printf("successfully saved snapshot: %d reminders", len(reminders))
 	}
 	return nil

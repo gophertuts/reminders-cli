@@ -44,12 +44,16 @@ func (e InvalidJSONError) Error() string {
 	return e.Message
 }
 
-// NotFoundError represents the error returned in case on not found routes
+// NotFoundError represents the error returned in case a resource or route is not found
 type NotFoundError struct {
+	Message string
 }
 
 func (e NotFoundError) Error() string {
-	return "resource not found"
+	if e.Message == "" {
+		return "resource not found"
+	}
+	return e.Message
 }
 
 // WrapError wraps a plain error into a custom error
