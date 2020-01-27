@@ -4,18 +4,19 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 )
 
 // flagList represents []int values for CLI flags
 type flagList []string
 
-func (i *flagList) String() string {
-	return "my string representation"
+func (list *flagList) String() string {
+	return strings.Join(*list, ",")
 }
 
-func (i *flagList) Set(v string) error {
-	*i = append(*i, v)
+func (list *flagList) Set(v string) error {
+	*list = append(*list, v)
 	return nil
 }
 
