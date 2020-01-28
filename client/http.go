@@ -115,13 +115,13 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 		return []byte{}, e
 	}
 
-	bs, err = c.readResBody(res.Body)
+	resBody, err := c.readResBody(res.Body)
 	if err != nil {
 		return []byte{}, err
 	}
 	if res.StatusCode != resCode {
 		if len(bs) > 0 {
-			fmt.Printf("got this response body:\n%s\n", string(bs))
+			fmt.Printf("got this response body:\n%s\n", resBody)
 		}
 		return []byte{}, fmt.Errorf(
 			"expected response code: %d, got: %d",
@@ -134,19 +134,16 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 }
 
 // readBody reads response body
-func (c HTTPClient) readResBody(b io.Reader) ([]byte, error) {
+func (c HTTPClient) readResBody(b io.Reader) (string, error) {
 	bs, err := ioutil.ReadAll(b)
 	if err != nil || len(bs) == 0 {
-		e := wrapError("could not read response body", err)
-		return []byte{}, e
+		return "", wrapError("could not read response body", err)
 	}
 
 	var buff bytes.Buffer
-	err = json.Indent(&buff, bs, "", "\t")
-	if err != nil {
-		e := wrapError("could not indent json", err)
-		return []byte{}, e
+	if err := json.Indent(&buff, bs, "", "\t"); err != nil {
+		return "", wrapError("could not indent json", err)
 	}
 
-	return buff.Bytes(), nil
+	return buff.String(), nil
 }
