@@ -36,9 +36,11 @@ func (p *person) Set(v string) error {
 func main() {
 	var ids idsFlag
 	var p person
+
 	flag.Var(&ids, "ids", "list of ids")
 	flag.Var(&p, "person", "person name")
 	flag.Parse()
+
 	fmt.Println(ids)
 	fmt.Println(p.name)
 	fmt.Println(p.born)

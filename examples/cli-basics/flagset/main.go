@@ -7,23 +7,26 @@ import (
 	"os"
 )
 
+const (
+	GreetCmd = "greet"
+	MsgFlag  = "msg"
+)
+
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Println("no command provided")
-		os.Exit(2)
+		log.Fatal("no command provided")
 	}
 	cmd := os.Args[1]
 	switch cmd {
-	case "greet":
-		greetCmd := flag.NewFlagSet("greet", flag.ExitOnError)
-		msg := greetCmd.String("msg", "CLI Basics", "greeting message")
+	case GreetCmd:
+		greetCmd := flag.NewFlagSet(GreetCmd, flag.ExitOnError)
+		msgFlag := greetCmd.String(MsgFlag, "CLI Basics", "greeting message")
 		err := greetCmd.Parse(os.Args[2:])
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("hello and welcome: %s\n", *msg)
+		fmt.Printf("hello and welcome: %s\n", *msgFlag)
 	default:
-		fmt.Printf("unknown command: %s\n", cmd)
-		os.Exit(2)
+		log.Fatalf("unknown command: %s\n", cmd)
 	}
 }

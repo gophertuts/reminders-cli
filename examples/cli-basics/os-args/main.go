@@ -16,28 +16,17 @@ func main() {
 	case "greet":
 		msg := "CLI Basics"
 		if len(os.Args) > 2 {
-			if os.Args[2] == "--help" {
-				fmt.Println("Usage of greet:\n -msg string\n\tgreeting message (default 'CLI Basics')")
-				return
-			}
-			msgFlag := getFlag(os.Args[2], "--msg")
-			if msgFlag != "" {
-				msg = msgFlag
+			f := strings.Split(os.Args[2], "=")
+			if len(f) == 2 && f[0] == "--msg" {
+				msg = f[1]
 			}
 		}
 		fmt.Printf("hello and welcome: %s\n", msg)
 	case "help":
-		fmt.Println("here's some help, take it")
+		fmt.Println("some help message")
 	default:
 		fmt.Printf("unknown command: %s\n", cmd)
 		os.Exit(2)
 	}
 }
 
-func getFlag(s string, name string) string {
-	f := strings.Split(s, "=")
-	if len(f) != 2 || f[0] != name {
-		return ""
-	}
-	return f[1]
-}
