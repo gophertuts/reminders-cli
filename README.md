@@ -251,13 +251,13 @@ node notfier/notifier.js
 
 - [Handler](https://golang.org/pkg/net/http/#Handler)
 
-## Feedback ⚗
+## Feedback 🐧
 
-[GopherTuts TypeForm](https://feedback.gophertuts.com)
+[SteveHook TypeForm](https://feedback.gophertuts.com)
 
-## Community 🙌
+## Community 💬
 
-[GopherTuts Discord](https://community.gophertuts.com/)
+[SteveHook Discord](https://discord.gg/tprewQu)
 
 ---
 
