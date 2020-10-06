@@ -33,6 +33,7 @@ Ta-dah 🥳 🚀
 
 - [Reminders CLI in Go #1 - Project setup & bare bones](https://youtu.be/-9CbX2MncZg)
 - [Reminders CLI in Go #2 - Notifier Service](https://youtu.be/rlsnqlSjUOc)
+- [Reminders CLI in Go #3 - CLI Basics](https://youtu.be/PbKCvQuAPIQ)
 
 
 ## Requirements 🤓
