@@ -6,6 +6,7 @@ fmt:
 
 lint:
 	@echo "Linting the source code"
+	# go get -u golang.org/x/lint/golint
 	golint ./...
 
 vet:

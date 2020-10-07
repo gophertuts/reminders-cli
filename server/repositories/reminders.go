@@ -17,20 +17,20 @@ type FileDB interface {
 	GenerateID() int
 }
 
-// Reminder represents the Reminder repository (database layer)
-type Reminder struct {
+// Reminders represents the Reminders repository (database layer)
+type Reminders struct {
 	DB FileDB
 }
 
-// NewReminder creates a new instance of Reminder repository
-func NewReminder(db FileDB) *Reminder {
-	return &Reminder{
+// NewReminders creates a new instance of Reminder repository
+func NewReminders(db FileDB) *Reminders {
+	return &Reminders{
 		DB: db,
 	}
 }
 
 // Save saves the current snapshot of reminders in the DB
-func (r Reminder) Save(reminders []models.Reminder) (int, error) {
+func (r Reminders) Save(reminders []models.Reminder) (int, error) {
 	bs, err := json.Marshal(reminders)
 	if err != nil {
 		return 0, err
@@ -43,7 +43,7 @@ func (r Reminder) Save(reminders []models.Reminder) (int, error) {
 }
 
 // Filter filters reminders by a filtering function
-func (r Reminder) Filter(filterFn func(reminder models.Reminder) bool) (services.RemindersMap, error) {
+func (r Reminders) Filter(filterFn func(reminder models.Reminder) bool) (services.RemindersMap, error) {
 	bs := make([]byte, r.DB.Size())
 	n, err := r.DB.Read(bs)
 	if err != nil {
@@ -70,6 +70,6 @@ func (r Reminder) Filter(filterFn func(reminder models.Reminder) bool) (services
 }
 
 // NextID fetches the next DB AUTOINCREMENT id
-func (r Reminder) NextID() int {
+func (r Reminders) NextID() int {
 	return r.DB.GenerateID()
 }

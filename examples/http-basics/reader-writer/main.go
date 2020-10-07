@@ -7,6 +7,7 @@ import (
 	"log"
 )
 
+// R is a io.Reader
 type R []byte
 
 func (r R) Read(bs []byte) (int, error) {
@@ -16,6 +17,7 @@ func (r R) Read(bs []byte) (int, error) {
 	return len(r), io.EOF
 }
 
+// W is a io.Writer
 type W []byte
 
 func (w W) Write(bs []byte) (int, error) {

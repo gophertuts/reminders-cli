@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// Commands & Flags
 const (
 	GreetCmd = "greet"
 	MsgFlag  = "msg"
