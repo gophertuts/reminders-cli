@@ -31,9 +31,9 @@ Ta-dah 🥳 🚀
 
 ## YouTube tutorials 🎥
 
-- [Reminders CLI in Go #1 - Project setup & bare bones](https://youtu.be/-9CbX2MncZg)
-- [Reminders CLI in Go #2 - Notifier Service](https://youtu.be/rlsnqlSjUOc)
-- [Reminders CLI in Go #3 - CLI Basics](https://youtu.be/PbKCvQuAPIQ)
+- [Reminders CLI in Go #1 - Project setup & bare bones](https://youtu.be/-9CbX2MncZg) - [[Download Code]](https://github.com/gophertuts/reminders-cli/raw/master/zips/reminders-cli-1.tar.gz)
+- [Reminders CLI in Go #2 - Notifier Service](https://youtu.be/rlsnqlSjUOc) - [[Download Code]](https://github.com/gophertuts/reminders-cli/raw/master/zips/reminders-cli-2.tar.gz)
+- [Reminders CLI in Go #3 - CLI Basics](https://youtu.be/PbKCvQuAPIQ) - [[Download Code]](https://github.com/gophertuts/reminders-cli/raw/master/zips/reminders-cli-3.tar.gz)
 
 
 ## Requirements 🤓
