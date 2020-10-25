@@ -21,7 +21,7 @@ var (
 func main() {
 	flag.Parse()
 	db := repositories.NewDB(*dbFlag, *dbCfgFlag)
-	repo := repositories.NewReminder(db)
+	repo := repositories.NewReminders(db)
 	service := services.NewReminders(repo)
 	backend := server.New(*addrFlag, service)
 	saver := services.NewSaver(service)

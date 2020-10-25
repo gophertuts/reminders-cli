@@ -8,14 +8,14 @@ import (
 	"time"
 )
 
-// flagList represents []int values for CLI flags
-type flagList []string
+// idsFlag represents []string values passed from CLI
+type idsFlag []string
 
-func (list *flagList) String() string {
+func (list *idsFlag) String() string {
 	return strings.Join(*list, ",")
 }
 
-func (list *flagList) Set(v string) error {
+func (list *idsFlag) Set(v string) error {
 	*list = append(*list, v)
 	return nil
 }
@@ -94,7 +94,7 @@ func (s Switch) create() func(string) error {
 // edit represents the edit command which edit a reminder
 func (s Switch) edit() func(string) error {
 	return func(cmdName string) error {
-		ids := flagList{}
+		ids := idsFlag{}
 		editCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
 		editCmd.Var(&ids, "id", "The ID (int) of the reminder to edit")
 		t, m, d := s.reminderFlags(editCmd)
@@ -119,7 +119,7 @@ func (s Switch) edit() func(string) error {
 // fetch represents the fetch command which fetches a list of reminders
 func (s Switch) fetch() func(string) error {
 	return func(cmdName string) error {
-		ids := flagList{}
+		ids := idsFlag{}
 		fetchCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
 		fetchCmd.Var(&ids, "id", "List of reminder IDs (int) to fetch")
 
@@ -142,7 +142,7 @@ func (s Switch) fetch() func(string) error {
 // delete represents the delete command which deletes a reminder
 func (s Switch) delete() func(string) error {
 	return func(cmdName string) error {
-		ids := flagList{}
+		ids := idsFlag{}
 		deleteCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
 		deleteCmd.Var(&ids, "id", "List of reminder IDs (int) to delete")
 
