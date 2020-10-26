@@ -1,3 +1,6 @@
+.PHONY: client
+.PHONY: server
+
 all: fmt lint vet client server
 
 fmt:

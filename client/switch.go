@@ -53,9 +53,9 @@ type Switch struct {
 // Switch analyses the CLI args and executes the given command
 func (s Switch) Switch() error {
 	cmdName := os.Args[1]
-	cmd, ok := s.commands[os.Args[1]]
+	cmd, ok := s.commands[cmdName]
 	if !ok {
-		return fmt.Errorf("invalid command '%s'", cmdName)
+		return fmt.Errorf("invalid command '%s'\n", cmdName)
 	}
 	return cmd()(cmdName)
 }
@@ -71,8 +71,8 @@ func (s Switch) Help() {
 
 // create represents the create command which creates a new reminder
 func (s Switch) create() func(string) error {
-	return func(cmdName string) error {
-		createCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+	return func(cmd string) error {
+		createCmd := flag.NewFlagSet(cmd, flag.ExitOnError)
 		t, m, d := s.reminderFlags(createCmd)
 
 		if err := s.checkArgs(3); err != nil {
@@ -93,9 +93,9 @@ func (s Switch) create() func(string) error {
 
 // edit represents the edit command which edit a reminder
 func (s Switch) edit() func(string) error {
-	return func(cmdName string) error {
+	return func(cmd string) error {
 		ids := idsFlag{}
-		editCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+		editCmd := flag.NewFlagSet(cmd, flag.ExitOnError)
 		editCmd.Var(&ids, "id", "The ID (int) of the reminder to edit")
 		t, m, d := s.reminderFlags(editCmd)
 
@@ -118,9 +118,9 @@ func (s Switch) edit() func(string) error {
 
 // fetch represents the fetch command which fetches a list of reminders
 func (s Switch) fetch() func(string) error {
-	return func(cmdName string) error {
+	return func(cmd string) error {
 		ids := idsFlag{}
-		fetchCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+		fetchCmd := flag.NewFlagSet(cmd, flag.ExitOnError)
 		fetchCmd.Var(&ids, "id", "List of reminder IDs (int) to fetch")
 
 		if err := s.checkArgs(1); err != nil {
@@ -141,9 +141,9 @@ func (s Switch) fetch() func(string) error {
 
 // delete represents the delete command which deletes a reminder
 func (s Switch) delete() func(string) error {
-	return func(cmdName string) error {
+	return func(cmd string) error {
 		ids := idsFlag{}
-		deleteCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+		deleteCmd := flag.NewFlagSet(cmd, flag.ExitOnError)
 		deleteCmd.Var(&ids, "id", "List of reminder IDs (int) to delete")
 
 		if err := s.checkArgs(1); err != nil {
@@ -164,9 +164,9 @@ func (s Switch) delete() func(string) error {
 
 // health represents the health command which prints whether a host is healthy or not
 func (s Switch) health() func(string) error {
-	return func(cmdName string) error {
+	return func(cmd string) error {
 		var host string
-		healthCmd := flag.NewFlagSet(cmdName, flag.ExitOnError)
+		healthCmd := flag.NewFlagSet(cmd, flag.ExitOnError)
 		healthCmd.StringVar(&host, "host", s.backendAPIURL, "Host to ping for health")
 		if err := s.parseCmd(healthCmd); err != nil {
 			return err
@@ -196,7 +196,7 @@ func (s Switch) reminderFlags(f *flag.FlagSet) (*string, *string, *time.Duration
 func (s Switch) parseCmd(cmd *flag.FlagSet) error {
 	err := cmd.Parse(os.Args[2:])
 	if err != nil {
-		return wrapError("could not parse '"+cmd.Name()+"' flags", err)
+		return wrapError("could not parse '"+cmd.Name()+"' command flags", err)
 	}
 	return nil
 }
