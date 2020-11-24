@@ -55,7 +55,7 @@ func (s Switch) Switch() error {
 	cmdName := os.Args[1]
 	cmd, ok := s.commands[cmdName]
 	if !ok {
-		return fmt.Errorf("invalid command '%s'\n", cmdName)
+		return fmt.Errorf("invalid command '%s'", cmdName)
 	}
 	return cmd()(cmdName)
 }

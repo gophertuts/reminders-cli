@@ -120,7 +120,7 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 		return []byte{}, err
 	}
 	if res.StatusCode != resCode {
-		if len(bs) > 0 {
+		if len(resBody) > 0 {
 			fmt.Printf("got this response body:\n%s\n", resBody)
 		}
 		return []byte{}, fmt.Errorf(
@@ -130,7 +130,7 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 		)
 	}
 
-	return bs, err
+	return []byte(resBody), err
 }
 
 // readBody reads response body

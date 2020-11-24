@@ -165,7 +165,7 @@ func (s Reminders) Edit(reminderBody ReminderEditBody) (models.Reminder, error) 
 
 // Fetch fetches a list of reminders
 func (s Reminders) Fetch(ids []int) ([]models.Reminder, error) {
-	reminders := []models.Reminder{}
+	reminders := make([]models.Reminder, 0)
 	var notFound []int
 	for _, id := range ids {
 		_, ok := s.Snapshot.All[id]
