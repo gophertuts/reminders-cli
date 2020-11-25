@@ -136,8 +136,12 @@ func (c HTTPClient) apiCall(method, path string, body interface{}, resCode int) 
 // readBody reads response body
 func (c HTTPClient) readResBody(b io.Reader) (string, error) {
 	bs, err := ioutil.ReadAll(b)
-	if err != nil || len(bs) == 0 {
+	if err != nil {
 		return "", wrapError("could not read response body", err)
+	}
+
+	if len(bs) == 0 {
+		return "", nil
 	}
 
 	var buff bytes.Buffer
