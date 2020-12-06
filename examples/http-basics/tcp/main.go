@@ -21,14 +21,17 @@ func handle(conn net.Conn) {
 	defer conn.Close()
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
 	scanner := bufio.NewScanner(conn)
-	var body string
+	var req string
 	for scanner.Scan() {
 		l := scanner.Text()
-		body += l + "\n"
+		req += l + "\n"
 	}
-	res := fmt.Sprintf("HTTP/1.1 200 OK\nContent-Length: %d\n\n%s", len(body), body)
+	res := "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
 	_, err := conn.Write([]byte(res))
 	if err != nil {
 		log.Fatal(err)
+	}
+	if req != "" {
+		fmt.Printf("THE REQUEST:\n%s", req)
 	}
 }

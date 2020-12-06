@@ -19,7 +19,7 @@ func main() {
 	body := bytes.NewReader([]byte(`{"title": "some title"}`))
 	res, err = http.Post("http://localhost:8080", "*/*", body)
 	if err != nil {
-		log.Fatalf("could not make request to google: %v", err)
+		log.Fatalf("could not make request to localhost: %v", err)
 	}
 	bs, _ = ioutil.ReadAll(res.Body)
 	fmt.Printf("\nPOST REQUEST:\n\n%s\n", string(bs))
